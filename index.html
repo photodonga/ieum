@@ -1233,10 +1233,6 @@
     }
   }
 
-  /* v1.11.17 — 미리보기 표시 크기와 실제 출력 픽셀 크기를 분리.
-     작은 원본/강한 크롭으로 출력 해상도가 작아져도 화면의 작업 프레임은
-     미리보기 영역에 맞춰 확대 표시한다. 저장 해상도 자체는 변경하지 않는다. */
-
 </style>
 <div class="wrap">
 <header class="top">
@@ -2637,13 +2633,12 @@
 
   function renderComposite(opts){
     const live = !!(opts && opts.live);
-    // 조정 중에는 현재 화면상의 프리뷰 폭을 고정한다.
-    // 최대 크기 모드에서는 crop zoom에 따라 canvas의 실제 픽셀 크기가 달라질 수 있는데,
-    // settle render 때 표시 폭까지 다시 계산하면 사진 전체가 작아지는 것처럼 보인다.
+    // pin the on-screen box to its last full-quality width before shrinking the canvas's
+    // own pixel resolution for a live-drag frame (see LIVE_PREVIEW_MAX_LONG); release the
+    // pin on every settle render so `max-width:100%` governs sizing again as normal.
     if (live) {
       if (!canvas.style.width) canvas.style.width = canvas.getBoundingClientRect().width + 'px';
-    } else if (!editingId) {
-      // 조정을 끝낸 뒤에만 자동 맞춤 크기로 복귀한다.
+    } else {
       canvas.style.width = '';
     }
     if (photos.length === 0) {
@@ -3411,10 +3406,10 @@
           const slot=lastSlots.find(s=>s.id===editingId);
           const byWidth=(availW*0.72)/canvas.width;
           const bySelected=slot && slot.h ? (availH*0.82)/slot.h : byWidth;
-          const sc=Math.min(byWidth,bySelected);
+          const sc=Math.min(1,byWidth,bySelected);
           canvasWrap.style.width=Math.max(1,Math.floor(canvas.width*sc))+'px';
         }else{
-          const sc=Math.min(availW/canvas.width,availH/canvas.height);
+          const sc=Math.min(1,availW/canvas.width,availH/canvas.height);
           canvasWrap.style.width=Math.max(1,Math.floor(canvas.width*sc))+'px';
         }
       }else{
@@ -3429,12 +3424,12 @@
 
     // 가로 잇기는 기존처럼 결과 전체가 회색 프레임 안에 들어오도록 맞춤.
     if(previewZoomMode==='fit'){
-      const sc=Math.min(availW/canvas.width,availH/canvas.height);
+      const sc=Math.min(1,availW/canvas.width,availH/canvas.height);
       canvasWrap.style.width=Math.max(1,Math.floor(canvas.width*sc))+'px';
       return;
     }
-    const displayBaseW=availW;
-    canvasWrap.style.width=Math.max(1,Math.floor(displayBaseW*Math.min(100,previewZoomPct)/100))+'px';
+    const naturalW=Math.min(canvas.width,availW);
+    canvasWrap.style.width=Math.max(1,Math.floor(naturalW*Math.min(100,previewZoomPct)/100))+'px';
   }
   const previewZoomSeg=el('previewZoomSeg');
   previewZoomSeg.addEventListener('click',e=>{
@@ -3564,25 +3559,16 @@
     // PC trackpad pinch is delivered as a ctrl/meta-modified wheel event in Chromium/Safari.
     // Make pinch about 1.8x more responsive, while preserving the existing mouse-wheel /
     // ordinary two-finger scroll zoom sensitivity.
-    // PC trackpad pinch: quantize each pinch burst to predictable 15% zoom steps.
-    // A short pause starts a new burst. This makes similar finger gestures produce
-    // the same zoom change instead of depending heavily on wheel delta magnitude.
+    // PC trackpad pinch: boost small gestures strongly, but compress large deltas
+    // so a light pinch feels immediate without making a hard pinch uncontrollably jumpy.
     let factor;
     if (e.ctrlKey || e.metaKey) {
-      const now = performance.now();
-      const dir = e.deltaY < 0 ? 1 : -1;
-      const NEW_BURST_MS = 140;
-      const isNewBurst =
-        !ctx.pinchBurstLastAt ||
-        (now - ctx.pinchBurstLastAt) > NEW_BURST_MS ||
-        ctx.pinchBurstDir !== dir;
-
-      ctx.pinchBurstLastAt = now;
-      ctx.pinchBurstDir = dir;
-
-      if (!isNewBurst) return;
-
-      factor = dir > 0 ? 1.15 : (1 / 1.15);
+      const d = -e.deltaY;
+      if (Math.abs(d) < 0.01) return;
+      const sign = Math.sign(d);
+      // Non-linear response: small deltas get a strong lift; large deltas taper off.
+      const shaped = sign * Math.min(0.32, 0.105 + 0.018 * Math.sqrt(Math.abs(d)));
+      factor = Math.exp(shaped);
     } else {
       factor = Math.exp(-e.deltaY * 0.0018);
     }
