@@ -1233,6 +1233,9 @@
     }
   }
 
+
+  /* v1.11.19 — 편집 프레임 우/하단 미세 어긋남 방지 */
+  .edit-overlay{box-sizing:border-box;}
 </style>
 <div class="wrap">
 <header class="top">
@@ -3201,8 +3204,11 @@
   function positionEditOverlay(){
     const slot = lastSlots.find(s => s.id === editingId);
     if (!slot || !canvas.clientWidth) { exitEdit(); return; }
-    const scale = canvas.clientWidth / canvas.width;
-    const left = slot.x * scale, top = slot.y * scale, width = slot.w * scale, height = slot.h * scale;
+    // 화면에 표시된 canvas의 X/Y 실제 배율을 각각 사용해 편집 프레임을 정확히 맞춘다.
+    const scaleX = canvas.clientWidth / canvas.width;
+    const scaleY = canvas.clientHeight / canvas.height;
+    const left = slot.x * scaleX, top = slot.y * scaleY;
+    const width = slot.w * scaleX, height = slot.h * scaleY;
     editOverlay.style.left = left + 'px';
     editOverlay.style.top = top + 'px';
     editOverlay.style.width = width + 'px';
