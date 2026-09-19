@@ -1233,6 +1233,10 @@
     }
   }
 
+  /* v1.11.17 — 미리보기 표시 크기와 실제 출력 픽셀 크기를 분리.
+     작은 원본/강한 크롭으로 출력 해상도가 작아져도 화면의 작업 프레임은
+     미리보기 영역에 맞춰 확대 표시한다. 저장 해상도 자체는 변경하지 않는다. */
+
 </style>
 <div class="wrap">
 <header class="top">
@@ -3407,10 +3411,10 @@
           const slot=lastSlots.find(s=>s.id===editingId);
           const byWidth=(availW*0.72)/canvas.width;
           const bySelected=slot && slot.h ? (availH*0.82)/slot.h : byWidth;
-          const sc=Math.min(1,byWidth,bySelected);
+          const sc=Math.min(byWidth,bySelected);
           canvasWrap.style.width=Math.max(1,Math.floor(canvas.width*sc))+'px';
         }else{
-          const sc=Math.min(1,availW/canvas.width,availH/canvas.height);
+          const sc=Math.min(availW/canvas.width,availH/canvas.height);
           canvasWrap.style.width=Math.max(1,Math.floor(canvas.width*sc))+'px';
         }
       }else{
@@ -3425,12 +3429,12 @@
 
     // 가로 잇기는 기존처럼 결과 전체가 회색 프레임 안에 들어오도록 맞춤.
     if(previewZoomMode==='fit'){
-      const sc=Math.min(1,availW/canvas.width,availH/canvas.height);
+      const sc=Math.min(availW/canvas.width,availH/canvas.height);
       canvasWrap.style.width=Math.max(1,Math.floor(canvas.width*sc))+'px';
       return;
     }
-    const naturalW=Math.min(canvas.width,availW);
-    canvasWrap.style.width=Math.max(1,Math.floor(naturalW*Math.min(100,previewZoomPct)/100))+'px';
+    const displayBaseW=availW;
+    canvasWrap.style.width=Math.max(1,Math.floor(displayBaseW*Math.min(100,previewZoomPct)/100))+'px';
   }
   const previewZoomSeg=el('previewZoomSeg');
   previewZoomSeg.addEventListener('click',e=>{
