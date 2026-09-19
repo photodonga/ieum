@@ -1100,6 +1100,105 @@
     #photosCol > .panel{height:100%; min-height:0;}
     #photosCol .photo-list{flex:1 1 0; min-height:0; max-height:none !important; overflow-y:auto !important;}
   }
+
+  /* v1.11.14 — 하단 정보 정렬만 정리.
+     출력정보/단축키/개인정보/저작권의 시각적 축을 하나로 맞춘다. */
+  .preview-bottom-bar .readout{
+    justify-content:center;
+    gap:0;
+    text-align:center;
+  }
+  .preview-bottom-bar .readout > span{
+    display:inline-flex;
+    align-items:center;
+    white-space:nowrap;
+  }
+  .preview-bottom-bar .readout > span + span::before{
+    content:"·";
+    margin:0 9px;
+    color:var(--ink-faint);
+    opacity:.65;
+  }
+  #previewCol .shortcut-note{
+    text-align:center;
+  }
+  #previewCol .privacy-note{
+    justify-content:center;
+    text-align:center;
+  }
+  .app-footer{
+    margin-top:14px;
+    padding:12px 20px 0;
+    border-top:1px solid var(--panel-border);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px 14px;
+    flex-wrap:wrap;
+  }
+  .app-footer .contact-line{
+    margin-top:0;
+  }
+  .app-footer .contact-line::before{
+    content:"·";
+    margin-right:14px;
+    color:var(--ink-faint);
+    opacity:.65;
+  }
+
+  @media(max-width:700px){
+    .preview-bottom-bar .readout > span + span::before{margin:0 6px;}
+    #previewCol .privacy-note{
+      justify-content:flex-start;
+      text-align:left;
+    }
+    .app-footer{
+      display:block;
+      border-top:0;
+      margin-top:10px;
+      padding-top:4px;
+      line-height:1.5;
+    }
+    .app-footer .contact-line{margin-top:3px;}
+    .app-footer .contact-line::before{content:none;}
+  }
+
+
+  /* v1.11.15 — 출력 모드/포맷만 미리보기 하단 정중앙에 고정 */
+  .preview-bottom-bar{
+    position:relative;
+  }
+  .preview-bottom-bar .readout{
+    position:relative;
+    width:100%;
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    align-items:center;
+  }
+  .preview-bottom-bar .readout > span{
+    min-width:0;
+  }
+  /* 첫 번째 상태값(예: — / 픽셀 정보)은 왼쪽 */
+  .preview-bottom-bar .readout > span:first-child{
+    justify-self:start;
+  }
+  /* 출력 모드와 포맷은 가운데 묶음 */
+  .preview-bottom-bar .readout > span:nth-child(2){
+    justify-self:center;
+  }
+  .preview-bottom-bar .readout > span:nth-child(3){
+    justify-self:center;
+  }
+  .preview-bottom-bar .readout > span + span::before{
+    content:none;
+  }
+
+  @media(max-width:700px){
+    .preview-bottom-bar .readout{
+      grid-template-columns:1fr auto 1fr;
+    }
+  }
+
 </style>
 <div class="wrap">
 <header class="top">
