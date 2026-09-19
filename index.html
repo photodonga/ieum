@@ -838,6 +838,18 @@
   @media(max-width:700px){.shortcut-note{display:none;}}
 
 
+
+  /* v1.11.10 — mobile-only explicit photo add button in preview header */
+  .mobile-add-photo{display:none;}
+  @media(max-width:700px){
+    .mobile-add-photo{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:42px;height:42px;min-width:42px;min-height:42px;
+      padding:0;border-radius:10px;touch-action:manipulation;
+    }
+    .mobile-add-photo svg{width:21px;height:21px;}
+  }
+
   /* v1.9.0 — 미리보기 자체를 더 큰 드롭 영역으로 */
   @media(max-width:700px){
     .preview-stage{min-height:260px;}
@@ -1225,6 +1237,9 @@
 <h2>미리보기</h2>
 <div id="previewAdjustDock" hidden></div>
 <div class="preview-head-actions">
+<button class="icon-btn mobile-add-photo" id="mobileAddPhotoBtn" type="button" title="사진 추가" aria-label="사진 추가">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
 <div class="history-group">
 <button class="icon-btn" disabled="" id="undoBtn" title="실행 취소 (Ctrl+Z)">
 <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"></path></svg>
@@ -1345,6 +1360,7 @@
   }
   function sharpenAmount(v){ return SHARPEN_MAX_AMOUNT * sharpenLevel(v) / 10; }
   const EYE_LEVEL = 0.4;
+  // Preview/layout coordinate baseline only. Never use this as source resolution.
   const RATIO_BASELINE = 1000;
   const MAX_ZOOM = 5;
   // the gap's floor scales with the chosen OUTPUT size (a ratio, not a raw pixel count) —
@@ -1574,6 +1590,19 @@
     fileInput.value = '';
   });
 
+
+  // v1.11.10 — 모바일에서는 좁은 좌/우 여백 대신 확실한 + 버튼으로도 추가.
+  // 기존 좌/우 여백 추가 동작은 그대로 유지하며, + 버튼은 항상 맨 뒤에 삽입한다.
+  const mobileAddPhotoBtn = el('mobileAddPhotoBtn');
+  if (mobileAddPhotoBtn) {
+    mobileAddPhotoBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      pendingPreviewInsertIndex = photos.length;
+      fileInput.click();
+    });
+  }
+
   // Empty preview is the primary click-to-add target.
   // Once photos exist, clicking photos remains reserved for selection/adjustment.
   emptyPreview.setAttribute('role','button');
@@ -1590,32 +1619,58 @@
     }
   });
 
-  function addFiles(fileList){
-    const files = Array.from(fileList || []).filter(f => f.type.startsWith('image/'));
-    if (!files.length) return;
-    let loaded = 0;
-    files.forEach(file => {
+  // Decode the selected FILE itself. On iOS/iCloud, loading an object URL through
+  // HTMLImageElement can be handed a display-sized representation in some paths.
+  // createImageBitmap(file) asks the browser to decode the file/blob directly and keeps
+  // the decoded pixel dimensions independent from our 1000px preview/layout baseline.
+  async function decodeImageFile(file){
+    if ('createImageBitmap' in window) {
+      try {
+        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        if (bitmap && bitmap.width > 0 && bitmap.height > 0) {
+          return { img: bitmap, w: bitmap.width, h: bitmap.height };
+        }
+      } catch (_) { /* HEIF/older Safari: fall through to Image */ }
+    }
+    return await new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
       img.onload = () => {
-        const id = uid();
-        store.set(id, { img, w: img.naturalWidth, h: img.naturalHeight, name: file.name, thumb: makeThumb(img), effCache: {} });
-        photos.push({ id, rotation: 0, crop: null });
-        loaded++;
-        renderList();
-        if (settings.commonAuto) recomputeCommonSize();
-        scheduleRender();
-        if (loaded === files.length) pushHistory();
+        const out = { img, w: img.naturalWidth, h: img.naturalHeight };
+        URL.revokeObjectURL(url);
+        resolve(out);
       };
-      img.onerror = () => { loaded++; if (loaded === files.length) pushHistory(); };
+      img.onerror = (err) => { URL.revokeObjectURL(url); reject(err); };
       img.src = url;
     });
   }
 
-  function makeThumb(img){
+  function addFiles(fileList){
+    const files = Array.from(fileList || []).filter(f => f.type.startsWith('image/'));
+    if (!files.length) return;
+    let loaded = 0;
+    files.forEach(async file => {
+      try {
+        const decoded = await decodeImageFile(file);
+        const id = uid();
+        store.set(id, { img: decoded.img, w: decoded.w, h: decoded.h, name: file.name, thumb: makeThumb(decoded.img, decoded.w, decoded.h), effCache: {} });
+        photos.push({ id, rotation: 0, crop: null });
+        renderList();
+        if (settings.commonAuto) recomputeCommonSize();
+        scheduleRender();
+      } finally {
+        loaded++;
+        if (loaded === files.length) pushHistory();
+      }
+    });
+  }
+
+  function makeThumb(img, sourceW, sourceH){
+    const iw = sourceW || img.naturalWidth || img.width;
+    const ih = sourceH || img.naturalHeight || img.height;
     const max = 120;
-    const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
-    const w = Math.round(img.naturalWidth * s), h = Math.round(img.naturalHeight * s);
+    const s = Math.min(1, max / Math.max(iw, ih));
+    const w = Math.round(iw * s), h = Math.round(ih * s);
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
     c.getContext('2d').drawImage(img, 0, 0, w, h);
@@ -1719,7 +1774,7 @@
           <img class="thumb" src="${rec.thumb}" alt="" style="${p.rotation ? `transform:rotate(${p.rotation}deg);` : ''}">
           ${p.rotation ? `<span class="rot-badge">${p.rotation}°</span>` : ''}
         </div>
-        <span class="photo-name" title="${escapeHtml(rec.name)}">${escapeHtml(rec.name)}</span>
+        <span class="photo-name" title="${escapeHtml(rec.name)} · ${rec.w}×${rec.h}px">${escapeHtml(rec.name)}</span>
         <div class="stack-btns">
           <button data-act="up" ${idx===0?'disabled':''} title="위로">${ICONS.up}</button>
           <button data-act="down" ${idx===photos.length-1?'disabled':''} title="아래로">${ICONS.down}</button>
@@ -2758,20 +2813,18 @@
     frameDropOverlay.style.height=(slot.h*sy)+'px';
     frameDropOverlay.hidden=false;
   }
-  function replacePreviewPhoto(targetId,file){
+  async function replacePreviewPhoto(targetId,file){
     const idx=photos.findIndex(p=>p.id===targetId); if(idx<0||!file)return;
-    const img=new Image(),url=URL.createObjectURL(file);
-    img.onload=()=>{
+    try {
+      const decoded=await decodeImageFile(file);
       const newId=uid();
-      store.set(newId,{img,w:img.naturalWidth,h:img.naturalHeight,name:file.name,thumb:makeThumb(img),effCache:{}});
+      store.set(newId,{img:decoded.img,w:decoded.w,h:decoded.h,name:file.name,thumb:makeThumb(decoded.img,decoded.w,decoded.h),effCache:{}});
       photos[idx]={id:newId,rotation:0,crop:null};
       if(editingId===targetId)exitEdit();
       renderList();
       if(settings.commonAuto)recomputeCommonSize();
-      scheduleRender(); pushHistory(); URL.revokeObjectURL(url);
-    };
-    img.onerror=()=>URL.revokeObjectURL(url);
-    img.src=url;
+      scheduleRender(); pushHistory();
+    } catch (_) {}
   }
 
   function pointInsidePreview(clientX,clientY){
@@ -3136,31 +3189,27 @@
     if (!editingId) return;
     replaceInput.click();
   });
-  replaceInput.addEventListener('change', (e) => {
+  replaceInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     replaceInput.value = '';
     if (!file || !file.type.startsWith('image/') || !editingId) return;
     const oldId = editingId;
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      // a fresh id (not overwriting oldId's store entry) so the old image stays
-      // reachable — undoing a "교체" back past this point needs the old photo's
-      // actual bytes still around, not just its id
+    try {
+      const decoded = await decodeImageFile(file);
+      // a fresh id (not overwriting oldId's store entry) so undo can still restore it
       const newId = uid();
-      store.set(newId, { img, w: img.naturalWidth, h: img.naturalHeight, name: file.name, thumb: makeThumb(img), effCache: {} });
+      store.set(newId, { img: decoded.img, w: decoded.w, h: decoded.h, name: file.name, thumb: makeThumb(decoded.img, decoded.w, decoded.h), effCache: {} });
       const idx = photos.findIndex(p => p.id === oldId);
       if (idx !== -1) photos[idx] = { id: newId, rotation: 0, crop: null };
       editingId = newId;
       if (settings.commonAuto) recomputeCommonSize();
       syncFitModeUI();
-  syncAdvancedState();
-  renderList();
+      syncAdvancedState();
+      renderList();
       renderNow();
       syncAdjustPanel();
       pushHistory();
-    };
-    img.src = url;
+    } catch (_) {}
   });
 
   /* ---------- global eye-level guide (one line across the whole composite) ---------- */
