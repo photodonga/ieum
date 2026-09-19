@@ -2633,12 +2633,13 @@
 
   function renderComposite(opts){
     const live = !!(opts && opts.live);
-    // pin the on-screen box to its last full-quality width before shrinking the canvas's
-    // own pixel resolution for a live-drag frame (see LIVE_PREVIEW_MAX_LONG); release the
-    // pin on every settle render so `max-width:100%` governs sizing again as normal.
+    // 조정 중에는 현재 화면상의 프리뷰 폭을 고정한다.
+    // 최대 크기 모드에서는 crop zoom에 따라 canvas의 실제 픽셀 크기가 달라질 수 있는데,
+    // settle render 때 표시 폭까지 다시 계산하면 사진 전체가 작아지는 것처럼 보인다.
     if (live) {
       if (!canvas.style.width) canvas.style.width = canvas.getBoundingClientRect().width + 'px';
-    } else {
+    } else if (!editingId) {
+      // 조정을 끝낸 뒤에만 자동 맞춤 크기로 복귀한다.
       canvas.style.width = '';
     }
     if (photos.length === 0) {
