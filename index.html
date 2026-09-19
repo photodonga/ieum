@@ -3525,7 +3525,7 @@
     // PC trackpad pinch is delivered as a ctrl/meta-modified wheel event in Chromium/Safari.
     // Make pinch about 1.8x more responsive, while preserving the existing mouse-wheel /
     // ordinary two-finger scroll zoom sensitivity.
-    const wheelSensitivity = (e.ctrlKey || e.metaKey) ? 0.0032 : 0.0018;
+    const wheelSensitivity = (e.ctrlKey || e.metaKey) ? 0.0045 : 0.0018;
     const factor = Math.exp(-e.deltaY * wheelSensitivity);
     ctx.entry.crop.z = clamp(ctx.entry.crop.z * factor, 1, MAX_ZOOM);
     syncZoomSlider();
