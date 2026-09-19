@@ -522,30 +522,20 @@
   .edit-rotate-zone[data-corner="sw"]{left:0; top:100%;}
   .edit-rotate-zone[data-corner="se"]{left:100%; top:100%;}
 
-  /* v1.11.12 — touch UI: gestures are separated on phones/tablets.
-     One finger pans, two-finger pinch zooms, and rotation gets one dedicated handle. */
-  .mobile-rotate-handle{display:none;}
+  /* v1.11.13 — touch controls are deliberately separated:
+     1 finger on photo = move, 2 fingers = zoom, corners = straighten/rotate.
+     The old one-finger corner zoom handles are hidden on touch devices so a single
+     finger can never change zoom. */
+  .mobile-rotate-handle{display:none !important;}
   @media (pointer:coarse){
-    /* Corner hit zones are excellent with a mouse but compete with fingers near the
-       image edge. Disable them only for touch-oriented devices. */
-    .edit-handle,.edit-rotate-zone{display:none;}
-    .mobile-rotate-handle{
-      display:block; position:absolute; left:50%; top:-34px; width:48px; height:48px;
-      transform:translate(-50%,-50%); border-radius:50%; cursor:grab; touch-action:none;
-      pointer-events:auto; z-index:8;
+    .edit-handle{display:none;}
+    .edit-rotate-zone{
+      display:block;
+      width:58px; height:58px;
+      pointer-events:auto;
+      touch-action:none;
+      z-index:9;
     }
-    .mobile-rotate-handle::before{
-      content:""; position:absolute; left:50%; top:24px; width:1px; height:18px;
-      transform:translateX(-50%); background:var(--accent); opacity:.9;
-    }
-    .mobile-rotate-handle::after{
-      content:"↻"; position:absolute; left:50%; top:50%; width:28px; height:28px;
-      transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center;
-      border-radius:50%; background:var(--panel-solid); border:2px solid var(--accent);
-      color:var(--accent); font-size:18px; line-height:1; font-weight:700;
-      box-shadow:0 2px 6px rgba(0,0,0,.28);
-    }
-    .mobile-rotate-handle.active{cursor:grabbing;}
   }
 
   .edit-done{
@@ -3119,7 +3109,7 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && editingId) exitEdit(); });
   previewStage.addEventListener('click', (e) => {
     // Controls belonging to the active edit overlay keep their own behavior.
-    if (e.target.closest?.('.edit-done, .edit-handle, .edit-rotate-zone')) return;
+    if (e.target.closest?.('.edit-done, .edit-handle, .edit-rotate-zone, .mobile-rotate-handle')) return;
 
     // A real drag/pinch is an adjustment, not a deselection click.
     if (dragMoved) return;
@@ -3474,7 +3464,7 @@
     });
   });
 
-  /* corner rotate zones: grab just outside a corner handle and arc around the photo's
+  /* corner straighten/rotate zones: on touch these are the ONLY one-finger corner action; arc around the photo's
      center to rotate — same crop.rot value (and same -45~45 range) as the 똑바르게
      slider, just a more direct/tactile way to reach it */
   document.querySelectorAll('.edit-rotate-zone').forEach((zone) => {
