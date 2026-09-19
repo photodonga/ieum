@@ -844,10 +844,11 @@
   @media(max-width:700px){
     .mobile-add-photo{
       display:inline-flex;align-items:center;justify-content:center;
-      width:42px;height:42px;min-width:42px;min-height:42px;
-      padding:0;border-radius:10px;touch-action:manipulation;
+      /* 눈높이/실행취소 아이콘 버튼과 동일한 30px 규격 */
+      width:30px;height:30px;min-width:30px;min-height:30px;max-width:30px;max-height:30px;
+      padding:0;border-radius:9px;touch-action:manipulation;
     }
-    .mobile-add-photo svg{width:21px;height:21px;}
+    .mobile-add-photo svg{width:15px;height:15px;}
   }
 
   /* v1.9.0 — 미리보기 자체를 더 큰 드롭 영역으로 */
