@@ -521,6 +521,33 @@
   .edit-rotate-zone[data-corner="ne"]{left:100%; top:0;}
   .edit-rotate-zone[data-corner="sw"]{left:0; top:100%;}
   .edit-rotate-zone[data-corner="se"]{left:100%; top:100%;}
+
+  /* v1.11.12 — touch UI: gestures are separated on phones/tablets.
+     One finger pans, two-finger pinch zooms, and rotation gets one dedicated handle. */
+  .mobile-rotate-handle{display:none;}
+  @media (pointer:coarse){
+    /* Corner hit zones are excellent with a mouse but compete with fingers near the
+       image edge. Disable them only for touch-oriented devices. */
+    .edit-handle,.edit-rotate-zone{display:none;}
+    .mobile-rotate-handle{
+      display:block; position:absolute; left:50%; top:-34px; width:48px; height:48px;
+      transform:translate(-50%,-50%); border-radius:50%; cursor:grab; touch-action:none;
+      pointer-events:auto; z-index:8;
+    }
+    .mobile-rotate-handle::before{
+      content:""; position:absolute; left:50%; top:24px; width:1px; height:18px;
+      transform:translateX(-50%); background:var(--accent); opacity:.9;
+    }
+    .mobile-rotate-handle::after{
+      content:"↻"; position:absolute; left:50%; top:50%; width:28px; height:28px;
+      transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center;
+      border-radius:50%; background:var(--panel-solid); border:2px solid var(--accent);
+      color:var(--accent); font-size:18px; line-height:1; font-weight:700;
+      box-shadow:0 2px 6px rgba(0,0,0,.28);
+    }
+    .mobile-rotate-handle.active{cursor:grabbing;}
+  }
+
   .edit-done{
     position:absolute; top:8px; right:8px; width:28px; height:28px; border-radius:50%;
     background:var(--accent); color:var(--accent-ink); border:none; cursor:pointer;
@@ -1293,6 +1320,7 @@
 <span class="edit-handle" data-corner="ne"></span>
 <span class="edit-handle" data-corner="sw"></span>
 <span class="edit-handle" data-corner="se"></span>
+<span class="mobile-rotate-handle" id="mobileRotateHandle" aria-label="회전"></span>
 <button class="edit-done" id="editDoneBtn" title="완료">
 <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" viewbox="0 0 24 24"><path d="m4 12 5 5L20 6"></path></svg>
 </button>
@@ -1308,7 +1336,7 @@
 </div>
 </div>
 </div>
-<div class="edit-hint preview-hint" id="editHint" hidden>사진을 끌어서 위치를 맞추세요 · 모서리를 끌거나 두 손가락·휠로 확대, 모서리 바깥쪽을 끌면 회전돼요</div>
+<div class="edit-hint preview-hint" id="editHint" hidden>사진을 끌어서 위치를 맞추세요 · 두 손가락·휠로 확대 · 터치에서는 위 회전 핸들, PC에서는 모서리로 조정해요</div>
 <div class="preview-bottom-bar">
 <div class="readout">
 <span class="dims mono" id="dimsReadout">—</span>
@@ -2498,12 +2526,6 @@
       exportBtn.disabled = true;
       lastSlots = [];
       if (editingId) exitEdit();
-
-      // v1.11.11 — 마지막 사진 삭제/전체 비우기 후 미리보기의 잔여 레이아웃 제거.
-      // 사진이 있을 때 적용된 canvas/canvasWrap 폭, 세로 미리보기 overflow,
-      // 스크롤 위치가 남으면 모바일에서 미리보기 툴바가 가로로 밀려 틀이 무너진다.
-      resetEmptyPreviewUI();
-
       if (eyeGuideOn) positionEyeGuide();
       return;
     }
@@ -3286,50 +3308,6 @@
     const naturalW=Math.min(canvas.width,availW);
     canvasWrap.style.width=Math.max(1,Math.floor(naturalW*Math.min(100,previewZoomPct)/100))+'px';
   }
-  function resetEmptyPreviewUI(){
-    // 출력 canvas의 픽셀 크기는 다음 사진 렌더 때 다시 정해진다.
-    // 여기서는 화면 표시 상태만 최초 빈 미리보기 상태로 되돌린다.
-    canvas.style.width = '';
-    canvas.style.height = '';
-    canvasWrap.style.width = '';
-    canvasWrap.style.maxWidth = '100%';
-    canvasWrap.style.transform = '';
-    canvasWrap.style.removeProperty('min-width');
-
-    previewStage.style.overflowX = 'hidden';
-    previewStage.style.overflowY = 'hidden';
-    previewStage.scrollLeft = 0;
-    previewStage.scrollTop = 0;
-    canvasWrap.scrollLeft = 0;
-    canvasWrap.scrollTop = 0;
-
-    // 빈 화면에서는 방향별 preview 전용 클래스가 레이아웃을 잡아두지 않게 한다.
-    previewStage.classList.remove('vertical-preview');
-
-    // 미리보기 배율 UI도 최초 상태(맞춤)로 복귀.
-    previewZoomMode = 'fit';
-    previewZoomPct = 100;
-    const zoomSegNow = document.getElementById('previewZoomSeg');
-    if (zoomSegNow) setActiveSeg(zoomSegNow, 'fit');
-
-    // 눈높이/편집 오버레이는 빈 미리보기에서 남지 않게 정리.
-    eyeGuide.hidden = true;
-    editOverlay.hidden = true;
-    editScrimTop.hidden = true;
-    editScrimBottom.hidden = true;
-    editScrimLeft.hidden = true;
-    editScrimRight.hidden = true;
-
-    // iOS에서 이전 overflow 폭이 한 프레임 남는 경우를 막기 위해
-    // 다음 프레임에도 스크롤 위치와 wrapper 폭을 한 번 더 확정한다.
-    requestAnimationFrame(() => {
-      canvasWrap.style.width = '';
-      canvasWrap.style.maxWidth = '100%';
-      previewStage.scrollLeft = 0;
-      previewStage.scrollTop = 0;
-    });
-  }
-
   const previewZoomSeg=el('previewZoomSeg');
   previewZoomSeg.addEventListener('click',e=>{
     const btn=e.target.closest('button'); if(!btn)return;
@@ -3399,7 +3377,7 @@
   let gesture = null;
 
   editOverlay.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('.edit-done, .edit-handle, .edit-rotate-zone')) return;
+    if (e.target.closest('.edit-done, .edit-handle, .edit-rotate-zone, .mobile-rotate-handle')) return;
     editOverlay.setPointerCapture(e.pointerId);
     activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const ctx = currentEditCtx();
@@ -3533,6 +3511,49 @@
       zone.addEventListener('pointerup', onUp);
     });
   });
+
+
+  // Touch-only dedicated rotation handle. Keeping rotation out of pinch makes
+  // two-finger zoom much more stable on iPhone/iPad while mouse behavior stays intact.
+  const mobileRotateHandle = document.getElementById('mobileRotateHandle');
+  if (mobileRotateHandle) {
+    mobileRotateHandle.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
+      const ctx0 = currentEditCtx();
+      if (!ctx0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      mobileRotateHandle.setPointerCapture(e.pointerId);
+      mobileRotateHandle.classList.add('active');
+      const rect = editOverlay.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2, centerY = rect.top + rect.height / 2;
+      const startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+      const startRot = ctx0.entry.crop.rot || 0;
+      let moved = false;
+      const onMove = (ev) => {
+        const c = currentEditCtx();
+        if (!c) return;
+        moved = true;
+        const angle = Math.atan2(ev.clientY - centerY, ev.clientX - centerX) * 180 / Math.PI;
+        let delta = angle - startAngle;
+        while (delta > 180) delta -= 360;
+        while (delta < -180) delta += 360;
+        c.entry.crop.rot = clamp(startRot - delta, -45, 45);
+        syncRotSlider();
+        renderLive();
+      };
+      const onEnd = () => {
+        mobileRotateHandle.removeEventListener('pointermove', onMove);
+        mobileRotateHandle.removeEventListener('pointerup', onEnd);
+        mobileRotateHandle.removeEventListener('pointercancel', onEnd);
+        mobileRotateHandle.classList.remove('active');
+        if (moved) { renderNow(); pushHistory(); }
+      };
+      mobileRotateHandle.addEventListener('pointermove', onMove);
+      mobileRotateHandle.addEventListener('pointerup', onEnd);
+      mobileRotateHandle.addEventListener('pointercancel', onEnd);
+    });
+  }
 
 
   /* ---------- keyboard shortcuts ----------
