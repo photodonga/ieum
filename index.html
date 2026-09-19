@@ -1199,43 +1199,6 @@
     }
   }
 
-
-  /* v1.11.16 — 출력 정보 3개를 화면 중앙의 한 그룹으로 모음 */
-  .preview-bottom-bar .readout{
-    display:flex !important;
-    width:100%;
-    align-items:center;
-    justify-content:center;
-    gap:0;
-    text-align:center;
-  }
-  .preview-bottom-bar .readout > span{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center !important;
-    width:auto !important;
-    min-width:0;
-    white-space:nowrap;
-  }
-  .preview-bottom-bar .readout > span + span::before{
-    content:"·" !important;
-    display:inline-block;
-    margin:0 12px;
-    color:var(--ink-faint);
-    opacity:.65;
-  }
-  @media(max-width:700px){
-    .preview-bottom-bar .readout{
-      flex-wrap:wrap;
-    }
-    .preview-bottom-bar .readout > span + span::before{
-      margin:0 7px;
-    }
-  }
-
-
-  /* v1.11.19 — 편집 프레임 우/하단 미세 어긋남 방지 */
-  .edit-overlay{box-sizing:border-box;}
 </style>
 <div class="wrap">
 <header class="top">
@@ -3204,11 +3167,8 @@
   function positionEditOverlay(){
     const slot = lastSlots.find(s => s.id === editingId);
     if (!slot || !canvas.clientWidth) { exitEdit(); return; }
-    // 화면에 표시된 canvas의 X/Y 실제 배율을 각각 사용해 편집 프레임을 정확히 맞춘다.
-    const scaleX = canvas.clientWidth / canvas.width;
-    const scaleY = canvas.clientHeight / canvas.height;
-    const left = slot.x * scaleX, top = slot.y * scaleY;
-    const width = slot.w * scaleX, height = slot.h * scaleY;
+    const scale = canvas.clientWidth / canvas.width;
+    const left = slot.x * scale, top = slot.y * scale, width = slot.w * scale, height = slot.h * scale;
     editOverlay.style.left = left + 'px';
     editOverlay.style.top = top + 'px';
     editOverlay.style.width = width + 'px';
@@ -3565,22 +3525,8 @@
     // PC trackpad pinch is delivered as a ctrl/meta-modified wheel event in Chromium/Safari.
     // Make pinch about 1.8x more responsive, while preserving the existing mouse-wheel /
     // ordinary two-finger scroll zoom sensitivity.
-    // PC trackpad pinch: boost small gestures strongly, but compress large deltas
-    // so a light pinch feels immediate without making a hard pinch uncontrollably jumpy.
-    let factor;
-    if (e.ctrlKey || e.metaKey) {
-      const d = -e.deltaY;
-      if (Math.abs(d) < 0.01) return;
-      const sign = Math.sign(d);
-      // PC trackpad pinch: one light gesture is capped at about ±25 percentage points.
-      // Keep small gestures responsive without allowing a short pinch to jump straight to 100%.
-      const currentPct = zToPercent(ctx.entry.crop.z);
-      const rawStepPct = Math.min(25, 8 + 2.4 * Math.sqrt(Math.abs(d)));
-      const nextPct = clamp(currentPct + sign * rawStepPct, 0, 100);
-      factor = percentToZ(nextPct) / ctx.entry.crop.z;
-    } else {
-      factor = Math.exp(-e.deltaY * 0.0018);
-    }
+    const wheelSensitivity = (e.ctrlKey || e.metaKey) ? 0.0045 : 0.0018;
+    const factor = Math.exp(-e.deltaY * wheelSensitivity);
     ctx.entry.crop.z = clamp(ctx.entry.crop.z * factor, 1, MAX_ZOOM);
     syncZoomSlider();
     renderLive();
