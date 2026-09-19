@@ -1199,6 +1199,40 @@
     }
   }
 
+
+  /* v1.11.16 — 출력 정보 3개를 화면 중앙의 한 그룹으로 모음 */
+  .preview-bottom-bar .readout{
+    display:flex !important;
+    width:100%;
+    align-items:center;
+    justify-content:center;
+    gap:0;
+    text-align:center;
+  }
+  .preview-bottom-bar .readout > span{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center !important;
+    width:auto !important;
+    min-width:0;
+    white-space:nowrap;
+  }
+  .preview-bottom-bar .readout > span + span::before{
+    content:"·" !important;
+    display:inline-block;
+    margin:0 12px;
+    color:var(--ink-faint);
+    opacity:.65;
+  }
+  @media(max-width:700px){
+    .preview-bottom-bar .readout{
+      flex-wrap:wrap;
+    }
+    .preview-bottom-bar .readout > span + span::before{
+      margin:0 7px;
+    }
+  }
+
 </style>
 <div class="wrap">
 <header class="top">
