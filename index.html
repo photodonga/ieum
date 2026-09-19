@@ -2498,6 +2498,12 @@
       exportBtn.disabled = true;
       lastSlots = [];
       if (editingId) exitEdit();
+
+      // v1.11.11 — 마지막 사진 삭제/전체 비우기 후 미리보기의 잔여 레이아웃 제거.
+      // 사진이 있을 때 적용된 canvas/canvasWrap 폭, 세로 미리보기 overflow,
+      // 스크롤 위치가 남으면 모바일에서 미리보기 툴바가 가로로 밀려 틀이 무너진다.
+      resetEmptyPreviewUI();
+
       if (eyeGuideOn) positionEyeGuide();
       return;
     }
@@ -3280,6 +3286,50 @@
     const naturalW=Math.min(canvas.width,availW);
     canvasWrap.style.width=Math.max(1,Math.floor(naturalW*Math.min(100,previewZoomPct)/100))+'px';
   }
+  function resetEmptyPreviewUI(){
+    // 출력 canvas의 픽셀 크기는 다음 사진 렌더 때 다시 정해진다.
+    // 여기서는 화면 표시 상태만 최초 빈 미리보기 상태로 되돌린다.
+    canvas.style.width = '';
+    canvas.style.height = '';
+    canvasWrap.style.width = '';
+    canvasWrap.style.maxWidth = '100%';
+    canvasWrap.style.transform = '';
+    canvasWrap.style.removeProperty('min-width');
+
+    previewStage.style.overflowX = 'hidden';
+    previewStage.style.overflowY = 'hidden';
+    previewStage.scrollLeft = 0;
+    previewStage.scrollTop = 0;
+    canvasWrap.scrollLeft = 0;
+    canvasWrap.scrollTop = 0;
+
+    // 빈 화면에서는 방향별 preview 전용 클래스가 레이아웃을 잡아두지 않게 한다.
+    previewStage.classList.remove('vertical-preview');
+
+    // 미리보기 배율 UI도 최초 상태(맞춤)로 복귀.
+    previewZoomMode = 'fit';
+    previewZoomPct = 100;
+    const zoomSegNow = document.getElementById('previewZoomSeg');
+    if (zoomSegNow) setActiveSeg(zoomSegNow, 'fit');
+
+    // 눈높이/편집 오버레이는 빈 미리보기에서 남지 않게 정리.
+    eyeGuide.hidden = true;
+    editOverlay.hidden = true;
+    editScrimTop.hidden = true;
+    editScrimBottom.hidden = true;
+    editScrimLeft.hidden = true;
+    editScrimRight.hidden = true;
+
+    // iOS에서 이전 overflow 폭이 한 프레임 남는 경우를 막기 위해
+    // 다음 프레임에도 스크롤 위치와 wrapper 폭을 한 번 더 확정한다.
+    requestAnimationFrame(() => {
+      canvasWrap.style.width = '';
+      canvasWrap.style.maxWidth = '100%';
+      previewStage.scrollLeft = 0;
+      previewStage.scrollTop = 0;
+    });
+  }
+
   const previewZoomSeg=el('previewZoomSeg');
   previewZoomSeg.addEventListener('click',e=>{
     const btn=e.target.closest('button'); if(!btn)return;
