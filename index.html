@@ -3559,16 +3559,25 @@
     // PC trackpad pinch is delivered as a ctrl/meta-modified wheel event in Chromium/Safari.
     // Make pinch about 1.8x more responsive, while preserving the existing mouse-wheel /
     // ordinary two-finger scroll zoom sensitivity.
-    // PC trackpad pinch: boost small gestures strongly, but compress large deltas
-    // so a light pinch feels immediate without making a hard pinch uncontrollably jumpy.
+    // PC trackpad pinch: quantize each pinch burst to predictable 15% zoom steps.
+    // A short pause starts a new burst. This makes similar finger gestures produce
+    // the same zoom change instead of depending heavily on wheel delta magnitude.
     let factor;
     if (e.ctrlKey || e.metaKey) {
-      const d = -e.deltaY;
-      if (Math.abs(d) < 0.01) return;
-      const sign = Math.sign(d);
-      // Non-linear response: small deltas get a strong lift; large deltas taper off.
-      const shaped = sign * Math.min(0.32, 0.105 + 0.018 * Math.sqrt(Math.abs(d)));
-      factor = Math.exp(shaped);
+      const now = performance.now();
+      const dir = e.deltaY < 0 ? 1 : -1;
+      const NEW_BURST_MS = 140;
+      const isNewBurst =
+        !ctx.pinchBurstLastAt ||
+        (now - ctx.pinchBurstLastAt) > NEW_BURST_MS ||
+        ctx.pinchBurstDir !== dir;
+
+      ctx.pinchBurstLastAt = now;
+      ctx.pinchBurstDir = dir;
+
+      if (!isNewBurst) return;
+
+      factor = dir > 0 ? 1.15 : (1 / 1.15);
     } else {
       factor = Math.exp(-e.deltaY * 0.0018);
     }
