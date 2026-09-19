@@ -3572,9 +3572,12 @@
       const d = -e.deltaY;
       if (Math.abs(d) < 0.01) return;
       const sign = Math.sign(d);
-      // Non-linear response: small deltas get a strong lift; large deltas taper off.
-      const shaped = sign * Math.min(0.32, 0.105 + 0.018 * Math.sqrt(Math.abs(d)));
-      factor = Math.exp(shaped);
+      // PC trackpad pinch: one light gesture is capped at about ±25 percentage points.
+      // Keep small gestures responsive without allowing a short pinch to jump straight to 100%.
+      const currentPct = zToPercent(ctx.entry.crop.z);
+      const rawStepPct = Math.min(25, 8 + 2.4 * Math.sqrt(Math.abs(d)));
+      const nextPct = clamp(currentPct + sign * rawStepPct, 0, 100);
+      factor = percentToZ(nextPct) / ctx.entry.crop.z;
     } else {
       factor = Math.exp(-e.deltaY * 0.0018);
     }
