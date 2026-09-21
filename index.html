@@ -2653,13 +2653,11 @@
 
     let finalScale, target;
     if (settings.outputMode === 'original') {
-      // "최대 크기" means: render as large as the source pixels allow without
-      // upscaling any photo. RATIO_BASELINE (1000) is only an internal layout unit;
-      // the old code accidentally exported that baseline 1:1, which made a 2:3
-      // horizontal pair about 1340x1000 regardless of the originals.
-      // Find the largest common scale at which every slot can still be supplied by
-      // its own crop window at native resolution.
-      let maxNativeScale = Infinity;
+      // v1.11.20 — "최대 크기"는 가장 해상도가 넉넉한 사진을 기준으로 정한다.
+      // 작은 사진/강하게 크롭한 사진 때문에 합성 전체가 함께 작아지지 않는다.
+      // 부족한 사진은 해당 슬롯에서만 업스케일되어 화질을 희생하고,
+      // 큰 사진의 해상도와 전체 결과 크기는 유지한다.
+      let referenceNativeScale = 0;
       items.forEach((it) => {
         const cropForScale = settings.fitMode === 'original'
           ? { ...it.p.crop, z:1, cx:.5, cy:.5, rot:0, skewV:0, skewH:0 }
@@ -2669,10 +2667,10 @@
         const baseH = settings.direction === 'vertical' ? it.slotLong : it.slotCross;
         const nativeScale = Math.min(win.winW / baseW, win.winH / baseH);
         if (Number.isFinite(nativeScale) && nativeScale > 0) {
-          maxNativeScale = Math.min(maxNativeScale, nativeScale);
+          referenceNativeScale = Math.max(referenceNativeScale, nativeScale);
         }
       });
-      finalScale = Number.isFinite(maxNativeScale) ? maxNativeScale : 1;
+      finalScale = referenceNativeScale > 0 ? referenceNativeScale : 1;
       target = compositeLong * finalScale;
     } else {
       target = settings.outputMode === 'custom' ? settings.outputCustom : settings.outputPreset;
