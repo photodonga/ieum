@@ -3797,7 +3797,13 @@
     if (photos.length === 0) return;
     const mime = settings.format === 'jpeg' ? 'image/jpeg' : 'image/png';
     const ext = settings.format === 'jpeg' ? 'jpg' : 'png';
-    const canShareFiles = !!(navigator.share && navigator.canShare);
+    // v1.11.21 — PC는 Web Share를 지원하더라도 공유 시트를 띄우지 않고
+    // 브라우저의 일반 다운로드 경로(Downloads)로 바로 저장한다.
+    // 모바일/터치 환경에서만 공유 시트를 사용해 사진 앱 저장 선택지를 제공한다.
+    const isMobileShareTarget =
+      window.matchMedia('(pointer:coarse)').matches ||
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const canShareFiles = isMobileShareTarget && !!(navigator.share && navigator.canShare);
 
     // second tap after a "저장 준비 완료" toast: share the already-encoded file RIGHT NOW,
     // synchronously in this click handler, before any await — this is the one call in
