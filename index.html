@@ -1318,19 +1318,10 @@
   // this keeps it proportional to what the user picked, while still staying comfortably
   // above the ~few-px smear that JPEG's compression blocks put on a too-thin white line
   const MIN_GAP_FRACTION = 0.004;
-  // while actively dragging/pinching/sliding a crop adjustment, redraw at a small capped
-  // resolution instead of the real export size — full-res source photos (routinely
-  // 4000px+ on the long side from a real camera) redrawn with a rotate/skew transform on
-  // every single touchmove tick is what was causing the lag/버퍼링 on mobile. #canvas only
-  // has `max-width:100%` (never `width:100%` — that would upscale a small "원본 유지"
-  // photo past its real resolution once the box is bigger than the photo), so dropping the
-  // canvas's own pixel width below the box's width makes the box visibly SHRINK to match,
-  // not just look softer — the on-screen photo would shrink every time you started
-  // dragging and pop back to full size on release. So while live, the CSS width is pinned
-  // to whatever the box measured at the last full-quality render (see renderComposite),
-  // keeping the on-screen size fixed; only the release settle-render actually looks softer
-  // up close, and even that lasts a single frame.
-  const LIVE_PREVIEW_MAX_LONG = 900;
+  // Interactive rendering is coalesced to one draw per animation frame.  Do not replace
+  // the visible canvas with a lower-resolution version while dragging: although faster,
+  // that makes the browser recalculate its intrinsic box and causes a distracting size
+  // flicker in Fit preview.
 
   /* ---------- state ---------- */
   let photos = [];              // ordered [{id, rotation, crop:{z,cx,cy}|null}]
@@ -2207,7 +2198,7 @@
      other — and stretches it to fill the rectangular destW x destH slot; that stretch is
      what actually straightens converging lines, instead of just tilting them the way a
      plain shear does. gridN trades quality for speed (coarse while a slider is being
-     dragged live, fine on the settle render — see LIVE_PREVIEW_MAX_LONG's same trade). */
+     dragged live, fine on the settle render). */
   // slider value (-50..50) -> keystone strength. An EASED curve (not linear) so the
   // first ~third of the slider stays subtle/fine-grained -- a photographer nudging out
   // a slightly-tilted building shouldn't already be at "strong trapezoid" by 20% of the
@@ -2439,14 +2430,6 @@
 
   function renderComposite(opts){
     const live = !!(opts && opts.live);
-    // pin the on-screen box to its last full-quality width before shrinking the canvas's
-    // own pixel resolution for a live-drag frame (see LIVE_PREVIEW_MAX_LONG); release the
-    // pin on every settle render so `max-width:100%` governs sizing again as normal.
-    if (live) {
-      if (!canvas.style.width) canvas.style.width = canvas.getBoundingClientRect().width + 'px';
-    } else {
-      canvas.style.width = '';
-    }
     if (photos.length === 0) {
       canvas.hidden = true;
       emptyPreview.style.display = '';
@@ -2517,11 +2500,6 @@
       target = settings.outputMode === 'custom' ? settings.outputCustom : settings.outputPreset;
       finalScale = target / compositeLong;
     }
-    if (live && target > LIVE_PREVIEW_MAX_LONG) {
-      target = LIVE_PREVIEW_MAX_LONG;
-      finalScale = target / compositeLong;
-    }
-
     // v1.7.8 — 간격은 '사진/프레임 크기'가 아니라 최종 결과물의 긴 축에 비례.
     // 목표 긴 축에서 원하는 gap px를 먼저 정한 뒤, 내부 좌표계 spacing으로 역산한다.
     if (settings.spacingMode !== 'none' && n > 1) {
@@ -2936,10 +2914,9 @@
     }
     renderComposite();
   }
-  // cheap, capped-resolution redraw for continuous drag/pinch/slider feedback — see
-  // LIVE_PREVIEW_MAX_LONG above for why this exists. Pointer events can arrive faster
-  // than the display refreshes, especially during iPhone pinch gestures, so coalesce
-  // them to one canvas render per animation frame.
+  // Interactive redraw for continuous drag/pinch/slider feedback. Pointer events can
+  // arrive faster than the display refreshes, especially during iPhone pinch gestures,
+  // so coalesce them to one canvas render per animation frame.
   function renderLive(){
     clearTimeout(renderTimer);
     if (liveRenderFrame) return;
@@ -3097,8 +3074,7 @@
   });
 
   // sliders fire 'input' continuously while being dragged and one final 'change' on
-  // release — live-preview during the drag, then one full-quality settle render on
-  // release (see LIVE_PREVIEW_MAX_LONG)
+  // release — interactive preview during the drag, then one final settle render.
   function commitCrop(){ renderNow(); pushHistory(); }
   zoomRange.addEventListener('input', () => {
     if (!editingId) return;
