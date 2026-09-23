@@ -884,7 +884,7 @@
   /* Settings stay above the scrollable photo list. */
   @media (min-width:1100px), (orientation:landscape) and (min-width:800px){
     .grid{
-      grid-template-columns:minmax(240px, 1fr) 4fr;
+      grid-template-columns:minmax(240px, 1fr) minmax(0, 4fr);
       grid-template-areas:
         "controls preview"
         "photos preview";
@@ -1052,6 +1052,17 @@
     }
   }
 
+
+  /* v1.11.11 — 사진을 선택(조정 모드)할 때 미리보기 크기가 바뀌며 흔들리지 않도록 고정
+     1) 안내 문구는 숨길 때도 자리를 차지해 미리보기 높이가 그대로 유지된다.
+     2) 헤더 높이를 조정 도크가 떠도 같은 높이로 고정한다.
+     3) 미리보기 열이 도크 내용 폭만큼 넓어져 가로 스크롤이 생기던 문제를 막는다. */
+  #previewCol{min-width:0;}
+  #editHint.preview-hint[hidden]{display:block !important; visibility:hidden;}
+  @media (min-width:701px){
+    .preview-toolbar-head{flex-wrap:wrap; min-height:34px;}
+    #previewAdjustDock{flex:1 1 420px;}
+  }
 </style>
 <div class="wrap">
 <header class="top">
@@ -3023,7 +3034,8 @@
     renderList();
     scrollSelectedPhotoIntoView(id);
     renderNow();
-    previewStage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // 이미 보이는 상태면 스크롤하지 않는다 (선택할 때마다 창이 흔들리던 원인)
+    previewStage.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   }
 
   function exitEdit(){
@@ -3678,7 +3690,9 @@
     // Reserve only the page's normal bottom breathing room. This value is independent of
     // the photo count and the height of the left column, so Fit stays visually stable.
     const safety = 8;
-    const available = Math.floor(window.innerHeight - stageRect.top - contentBelow - safety);
+    // 문서 기준 위치로 계산해야 스크롤 위치에 따라 미리보기 크기가 달라지지 않는다.
+    const stageTop = stageRect.top + window.scrollY;
+    const available = Math.floor(window.innerHeight - stageTop - contentBelow - safety);
 
     // Keep the drop target usable on short windows, but otherwise consume all
     // available space. No device-specific Mac/iPad/Windows breakpoints.
