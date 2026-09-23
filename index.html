@@ -1644,20 +1644,35 @@
   function addFiles(fileList){
     const files = Array.from(fileList || []).filter(f => f.type.startsWith('image/'));
     if (!files.length) return;
-    let loaded = 0;
-    files.forEach(async file => {
-      try {
-        const decoded = await decodeImageFile(file);
-        const id = uid();
-        store.set(id, { img: decoded.img, w: decoded.w, h: decoded.h, name: file.name, thumb: makeThumb(decoded.img, decoded.w, decoded.h), effCache: {} });
-        photos.push({ id, rotation: 0, crop: null });
+    // 디코딩은 병렬로 하되, 추가는 사용자가 고른 순서대로 한다.
+    // (예전에는 먼저 디코딩이 끝난 사진부터 붙어서 순서가 뒤바뀌곤 했다)
+    const ready = new Array(files.length);
+    let next = 0, loaded = 0;
+    const flush = () => {
+      let added = false;
+      while (next < files.length && ready[next] !== undefined) {
+        const r = ready[next++];
+        if (!r) continue; // 디코딩 실패한 파일은 건너뜀
+        store.set(r.id, r.rec);
+        photos.push({ id: r.id, rotation: 0, crop: null });
+        added = true;
+      }
+      if (added) {
         renderList();
         if (settings.commonAuto) recomputeCommonSize();
         scheduleRender();
-      } finally {
-        loaded++;
-        if (loaded === files.length) pushHistory();
       }
+    };
+    files.forEach(async (file, i) => {
+      let result = null;
+      try {
+        const decoded = await decodeImageFile(file);
+        result = { id: uid(), rec: { img: decoded.img, w: decoded.w, h: decoded.h, name: file.name, thumb: makeThumb(decoded.img, decoded.w, decoded.h), effCache: {} } };
+      } catch (_) { /* 읽을 수 없는 파일은 건너뜀 */ }
+      ready[i] = result;
+      flush();
+      loaded++;
+      if (loaded === files.length) pushHistory();
     });
   }
 
@@ -3051,6 +3066,7 @@
     adjustEmptyState.hidden = false;
     setActiveTab('settings');
     renderList();
+    syncPreviewInsertButtons(); // 조정 모드를 빠져나오면 좌우 + 버튼을 다시 보여준다
     requestAnimationFrame(applyPreviewZoom);
   }
 
