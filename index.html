@@ -433,6 +433,24 @@
      .edit-rotate-zone), which are deliberately centered ON the canvas edge and so need
      to reach slightly past it to be grabbable at all. */
   .canvas-wrap{position:relative; display:inline-block; line-height:0; max-width:100%; border-radius:4px;}
+  /* 사진이 미리보기를 가득 채우는 휴대폰에서도 양 끝에 바로 삽입할 수 있는 버튼.
+     화면 가장자리를 누르는 기존 동작과 같은 규칙: 왼쪽=맨 앞, 오른쪽=맨 뒤. */
+  .mobile-side-add{display:none;}
+  @media (max-width:700px){
+    .mobile-side-add{
+      position:absolute; top:50%; z-index:70;
+      display:flex; align-items:center; justify-content:center;
+      width:36px; height:44px; padding:0;
+      border:1px solid rgba(255,255,255,.76); border-radius:12px;
+      background:rgba(24,32,46,.68); color:#fff;
+      box-shadow:0 3px 12px rgba(0,0,0,.22);
+      transform:translateY(-50%); touch-action:manipulation;
+    }
+    .mobile-side-add.left{left:7px;}
+    .mobile-side-add.right{right:7px;}
+    .mobile-side-add:active{transform:translateY(-50%) scale(.94);}
+    .mobile-side-add svg{width:18px;height:18px;}
+  }
   .frame-drop-overlay{position:absolute;z-index:50;pointer-events:none;box-sizing:border-box;border:3px solid var(--accent);border-radius:4px;background:rgba(255,214,0,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.8);}
   .empty-slot-drop{
     position:absolute;z-index:49;pointer-events:none;box-sizing:border-box;
@@ -1221,6 +1239,12 @@
 <div class="preview-stage" id="previewStage">
 <div class="canvas-wrap" id="canvasWrap">
 <canvas hidden="" id="canvas"></canvas>
+<button class="mobile-side-add left" hidden="" id="mobileInsertLeftBtn" type="button" title="맨 앞에 사진 추가" aria-label="맨 앞에 사진 추가">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
+<button class="mobile-side-add right" hidden="" id="mobileInsertRightBtn" type="button" title="맨 뒤에 사진 추가" aria-label="맨 뒤에 사진 추가">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
 <div class="frame-drop-overlay" hidden="" id="frameDropOverlay"></div>
 <div class="empty-slot-drop" hidden="" id="emptySlotDrop">+ 사진 추가</div>
 <div class="insert-drop-cue" hidden="" id="insertDropCue"></div>
@@ -1520,6 +1544,21 @@
 
   /* ---------- adding photos ---------- */
   let pendingPreviewInsertIndex = null;
+  const mobileInsertLeftBtn = el('mobileInsertLeftBtn');
+  const mobileInsertRightBtn = el('mobileInsertRightBtn');
+
+  function openPreviewInsertPicker(index){
+    if (!photos.length) return;
+    pendingPreviewInsertIndex = index;
+    fileInput.click();
+  }
+
+  function syncPreviewInsertButtons(){
+    const hidden = !photos.length || !!editingId;
+    if (mobileInsertLeftBtn) mobileInsertLeftBtn.hidden = hidden;
+    if (mobileInsertRightBtn) mobileInsertRightBtn.hidden = hidden;
+  }
+
   fileInput.addEventListener('change', (e) => {
     const files = e.target.files;
     if (pendingPreviewInsertIndex !== null) {
@@ -1540,10 +1579,17 @@
     mobileAddPhotoBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      pendingPreviewInsertIndex = photos.length;
-      fileInput.click();
+      openPreviewInsertPicker(photos.length);
     });
   }
+  [[mobileInsertLeftBtn, 0], [mobileInsertRightBtn, () => photos.length]].forEach(([btn, index]) => {
+    if (!btn) return;
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openPreviewInsertPicker(typeof index === 'function' ? index() : index);
+    });
+  });
 
   // Empty preview is the primary click-to-add target.
   // Once photos exist, clicking photos remains reserved for selection/adjustment.
@@ -2558,6 +2604,7 @@
   function renderComposite(opts){
     const live = !!(opts && opts.live);
     if (photos.length === 0) {
+      syncPreviewInsertButtons();
       canvas.hidden = true;
       emptyPreview.style.display = '';
       dimsReadout.textContent = '—';
@@ -2574,6 +2621,7 @@
     const ctx = prepareCompositeCanvas(geometry.finalLong, geometry.finalCross);
     drawCompositeItems(ctx, items, geometry, live);
     updateRenderedPreview(ctx, geometry, live);
+    syncPreviewInsertButtons();
   }
 
   function updateSizeEstimate(){
@@ -3071,8 +3119,7 @@
       if (e.clientX < rect.left) insertIndex = 0;
       else if (e.clientX > rect.right) insertIndex = photos.length;
       if (insertIndex !== null) {
-        pendingPreviewInsertIndex = insertIndex;
-        fileInput.click();
+        openPreviewInsertPicker(insertIndex);
       }
     }
   });
