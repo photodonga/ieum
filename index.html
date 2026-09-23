@@ -526,7 +526,6 @@
      1 finger on photo = move, 2 fingers = zoom, corners = straighten/rotate.
      The old one-finger corner zoom handles are hidden on touch devices so a single
      finger can never change zoom. */
-  .mobile-rotate-handle{display:none !important;}
   @media (pointer:coarse){
     .edit-handle{display:none;}
     .edit-rotate-zone{
@@ -1409,7 +1408,6 @@
 <span class="edit-handle" data-corner="ne"></span>
 <span class="edit-handle" data-corner="sw"></span>
 <span class="edit-handle" data-corner="se"></span>
-<span class="mobile-rotate-handle" id="mobileRotateHandle" aria-label="회전"></span>
 <button class="edit-done" id="editDoneBtn" title="완료">
 <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" viewbox="0 0 24 24"><path d="m4 12 5 5L20 6"></path></svg>
 </button>
@@ -1425,7 +1423,7 @@
 </div>
 </div>
 </div>
-<div class="edit-hint preview-hint" id="editHint" hidden>사진을 끌어서 위치를 맞추세요 · 두 손가락·휠로 확대 · 터치에서는 위 회전 핸들, PC에서는 모서리로 조정해요</div>
+<div class="edit-hint preview-hint" id="editHint" hidden>사진을 끌어서 위치를 맞추세요 · 두 손가락·휠로 확대 · 터치에서는 모서리를 끌어 회전해요</div>
 <div class="preview-bottom-bar">
 <div class="readout">
 <span class="dims mono" id="dimsReadout">—</span>
@@ -2583,8 +2581,13 @@
 
   /* ---------- rendering the composite ---------- */
   let renderTimer = null;
+  let liveRenderFrame = 0;
   function scheduleRender(){
     clearTimeout(renderTimer);
+    if (liveRenderFrame) {
+      cancelAnimationFrame(liveRenderFrame);
+      liveRenderFrame = 0;
+    }
     renderTimer = setTimeout(renderComposite, 90);
   }
 
@@ -3090,10 +3093,26 @@
   const replaceInput = el('replaceInput');
   let editingId = null;
 
-  function renderNow(){ clearTimeout(renderTimer); renderComposite(); }
+  function renderNow(){
+    clearTimeout(renderTimer);
+    if (liveRenderFrame) {
+      cancelAnimationFrame(liveRenderFrame);
+      liveRenderFrame = 0;
+    }
+    renderComposite();
+  }
   // cheap, capped-resolution redraw for continuous drag/pinch/slider feedback — see
-  // LIVE_PREVIEW_MAX_LONG above for why this exists
-  function renderLive(){ clearTimeout(renderTimer); renderComposite({ live: true }); }
+  // LIVE_PREVIEW_MAX_LONG above for why this exists. Pointer events can arrive faster
+  // than the display refreshes, especially during iPhone pinch gestures, so coalesce
+  // them to one canvas render per animation frame.
+  function renderLive(){
+    clearTimeout(renderTimer);
+    if (liveRenderFrame) return;
+    liveRenderFrame = requestAnimationFrame(() => {
+      liveRenderFrame = 0;
+      renderComposite({ live: true });
+    });
+  }
 
   function zToPercent(z){ return Math.round(clamp((z - 1) / (MAX_ZOOM - 1), 0, 1) * 100); }
   function percentToZ(pct){ return 1 + (clamp(pct, 0, 100) / 100) * (MAX_ZOOM - 1); }
@@ -3206,7 +3225,7 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && editingId) exitEdit(); });
   previewStage.addEventListener('click', (e) => {
     // Controls belonging to the active edit overlay keep their own behavior.
-    if (e.target.closest?.('.edit-done, .edit-handle, .edit-rotate-zone, .mobile-rotate-handle')) return;
+    if (e.target.closest?.('.edit-done, .edit-handle, .edit-rotate-zone')) return;
 
     // A real drag/pinch is an adjustment, not a deselection click.
     if (dragMoved) return;
@@ -3462,9 +3481,14 @@
 
   const activePointers = new Map();
   let gesture = null;
+  let editGestureDirty = false;
 
   editOverlay.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('.edit-done, .edit-handle, .edit-rotate-zone, .mobile-rotate-handle')) return;
+    if (e.target.closest('.edit-done, .edit-handle, .edit-rotate-zone')) return;
+    if (activePointers.size === 0) {
+      editGestureDirty = false;
+      dragMoved = false;
+    }
     editOverlay.setPointerCapture(e.pointerId);
     activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const ctx = currentEditCtx();
@@ -3482,6 +3506,7 @@
     const ctx = currentEditCtx();
     if (!ctx || !gesture) return;
     dragMoved = true;
+    editGestureDirty = true;
     const win0 = computeCropWindow(ctx.eff, ctx.AR, { z: gesture.z, cx: gesture.cx, cy: gesture.cy });
     const SdispCss = (ctx.slot.w * ctx.cssScale) / win0.winW;
     if (activePointers.size === 1 && gesture.mode === 'pan') {
@@ -3503,15 +3528,18 @@
   function endEditPointer(e){
     activePointers.delete(e.pointerId);
     const ctx = currentEditCtx();
-    if (!ctx) { gesture = null; renderNow(); pushHistory(); return; }
+    if (!ctx) {
+      gesture = null;
+      if (editGestureDirty) { renderNow(); pushHistory(); }
+      return;
+    }
     if (activePointers.size === 1) {
       const [pos] = activePointers.values();
       gesture = { mode: 'pan', x: pos.x, y: pos.y, cx: ctx.entry.crop.cx, cy: ctx.entry.crop.cy, z: ctx.entry.crop.z };
-    } else {
-      gesture = null;
+      return;
     }
-    renderNow();
-    pushHistory();
+    gesture = null;
+    if (editGestureDirty) { renderNow(); pushHistory(); }
   }
   editOverlay.addEventListener('pointerup', endEditPointer);
   editOverlay.addEventListener('pointercancel', endEditPointer);
@@ -3602,50 +3630,6 @@
       zone.addEventListener('pointerup', onUp);
     });
   });
-
-
-  // Touch-only dedicated rotation handle. Keeping rotation out of pinch makes
-  // two-finger zoom much more stable on iPhone/iPad while mouse behavior stays intact.
-  const mobileRotateHandle = document.getElementById('mobileRotateHandle');
-  if (mobileRotateHandle) {
-    mobileRotateHandle.addEventListener('pointerdown', (e) => {
-      if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
-      const ctx0 = currentEditCtx();
-      if (!ctx0) return;
-      e.preventDefault();
-      e.stopPropagation();
-      mobileRotateHandle.setPointerCapture(e.pointerId);
-      mobileRotateHandle.classList.add('active');
-      const rect = editOverlay.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2, centerY = rect.top + rect.height / 2;
-      const startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
-      const startRot = ctx0.entry.crop.rot || 0;
-      let moved = false;
-      const onMove = (ev) => {
-        const c = currentEditCtx();
-        if (!c) return;
-        moved = true;
-        const angle = Math.atan2(ev.clientY - centerY, ev.clientX - centerX) * 180 / Math.PI;
-        let delta = angle - startAngle;
-        while (delta > 180) delta -= 360;
-        while (delta < -180) delta += 360;
-        c.entry.crop.rot = clamp(startRot - delta, -45, 45);
-        syncRotSlider();
-        renderLive();
-      };
-      const onEnd = () => {
-        mobileRotateHandle.removeEventListener('pointermove', onMove);
-        mobileRotateHandle.removeEventListener('pointerup', onEnd);
-        mobileRotateHandle.removeEventListener('pointercancel', onEnd);
-        mobileRotateHandle.classList.remove('active');
-        if (moved) { renderNow(); pushHistory(); }
-      };
-      mobileRotateHandle.addEventListener('pointermove', onMove);
-      mobileRotateHandle.addEventListener('pointerup', onEnd);
-      mobileRotateHandle.addEventListener('pointercancel', onEnd);
-    });
-  }
-
 
   /* ---------- keyboard shortcuts ----------
      Only act on the currently selected/adjusted photo (editingId).
