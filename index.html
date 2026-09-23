@@ -12,6 +12,7 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
 
+  /* ---------- Base ---------- */
   :root{
     --bg:#EEF0F3;
     --bg-grid:rgba(15,23,42,.05);
@@ -146,23 +147,6 @@
   .narrow-col{max-width:680px; width:100%; margin:0 auto;}
   .panel-narrow{max-width:680px; margin-left:auto; margin-right:auto;}
 
-  /* wide desktop ("풀스크린") — and, separately, any landscape device wide enough to
-     make good use of it (아이패드 가로모드, 큰 폰 가로모드, 펼친 폴드 등): 미리보기 gets
-     the lion's share of the width (~80%) on the right, 사진/설정/조정 stack in a narrow
-     sidebar (~20%, never below ~240px) on the left — instead of everything running
-     down one centered column. The two conditions are merged into one rule (rather than
-     two separate blocks) so a viewport matching both never gets conflicting values. */
-  @media (min-width:1100px), (orientation:landscape) and (min-width:800px){
-    .grid{
-      grid-template-columns:minmax(240px, 1fr) 4fr;
-      grid-template-areas:
-        "photos preview"
-        "controls preview";
-    }
-    .narrow-col{max-width:none; margin:0;}
-    .panel-narrow{max-width:none;}
-  }
-
   .panel{
     background:var(--panel);
     -webkit-backdrop-filter:blur(22px) saturate(160%);
@@ -220,14 +204,6 @@
     padding:10px 14px; display:flex; flex-direction:row; align-items:center; justify-content:center; gap:8px;
   }
   .dropzone.compact svg{width:15px;height:15px; margin:0;}
-  @media (max-width:600px){
-    .dropzone{padding:40px 14px;}
-    .dropzone svg{width:30px;height:30px;}
-    .dropzone div{font-size:13.5px;}
-    .dropzone.compact{padding:12px 14px;}
-    .dropzone.compact svg{width:15px;height:15px;}
-  }
-
   ul.photo-list{list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:8px;}
   li.photo-item{
     display:flex; align-items:center; gap:8px;
@@ -450,7 +426,8 @@
   }
   .privacy-note svg{width:12px;height:12px; flex:none;}
 
-  /* inline crop editing, directly on the live preview */
+  /* ---------- Edit overlay ---------- */
+  /* Inline crop editing, directly on the live preview. */
   /* no overflow:hidden here (any more) — the canvas rounds its own corners on its own
      border-radius below, and clipping would also cut off the corner rotate-zones (see
      .edit-rotate-zone), which are deliberately centered ON the canvas edge and so need
@@ -611,6 +588,15 @@
     transition:color .12s ease, border-color .12s ease;
   }
   .btn-outline:hover{color:var(--ink); border-color:color-mix(in srgb, var(--ink-faint) 50%, transparent);}
+  /* ---------- Mobile ---------- */
+  @media (max-width:600px){
+    .dropzone{padding:40px 14px;}
+    .dropzone svg{width:30px;height:30px;}
+    .dropzone div{font-size:13.5px;}
+    .dropzone.compact{padding:12px 14px;}
+    .dropzone.compact svg{width:15px;height:15px;}
+  }
+
   @media (max-width:700px){
     /* the preview is the whole point on a phone — claw back every bit of the page's
        outer padding so the actual composited image renders as large as possible
@@ -638,122 +624,6 @@
     *{transition:none !important; animation:none !important;}
   }
   [hidden]{display:none !important;}
-
-  /* v1.6 — PC: 사진 목록은 미리보기 패널 높이를 넘지 않고 내부 스크롤 */
-  @media (min-width:1100px), (orientation:landscape) and (min-width:800px){
-    #photosCol > .panel{
-      display:flex;
-      flex-direction:column;
-      min-height:0;
-      overflow:hidden;
-    }
-    #photosCol .photo-list{
-      flex:1 1 auto;
-      min-height:0;
-      overflow-y:auto;
-      overflow-x:hidden;
-      overscroll-behavior:contain;
-      scrollbar-gutter:stable;
-      padding-right:3px;
-    }
-    #photosCol .list-footer{flex:none;}
-    #photosCol .dropzone{flex:none;}
-  }
-
-
-  /* v1.7.3 — PC 레이아웃:
-     오른쪽 미리보기 열이 기준 높이. 왼쪽의 사진+설정 두 패널은 그 높이 안에 고정된다.
-     사진이 아무리 늘어도 grid 높이는 늘지 않고 사진 목록만 스크롤된다. */
-  @media (min-width:1100px), (orientation:landscape) and (min-width:800px){
-    .grid{
-      grid-template-rows:minmax(0, auto) minmax(0, 1fr);
-      align-items:stretch;
-    }
-    #previewCol{
-      grid-row:1 / 3;
-      align-self:stretch;
-      min-height:0;
-    }
-    #previewCol > .panel{
-      height:100%;
-      box-sizing:border-box;
-    }
-
-    #photosCol,#controlsCol{
-      min-height:0;
-      overflow:hidden;
-    }
-    #photosCol > .panel,#controlsCol > .panel{
-      height:100%;
-      box-sizing:border-box;
-    }
-
-    #photosCol > .panel{
-      display:flex;
-      flex-direction:column;
-      overflow:hidden;
-    }
-    #photosCol .panel-head,
-    #photosCol .dropzone,
-    #photosCol .list-footer{
-      flex:0 0 auto;
-    }
-    #photosCol .photo-list{
-      flex:1 1 0;
-      min-height:0;
-      overflow-y:auto !important;
-      overflow-x:hidden;
-      overscroll-behavior:contain;
-      scrollbar-gutter:stable;
-      padding-right:3px;
-    }
-  }
-
-
-  /* v1.7.4 — PC: 오른쪽 미리보기 높이가 전체 작업영역의 기준.
-     설정 패널은 필요한 높이만 쓰고, 남은 왼쪽 높이를 사진 패널이 사용한다. */
-  @media (min-width:1100px), (orientation:landscape) and (min-width:800px){
-    .grid{
-      grid-template-rows:minmax(0,1fr) auto !important;
-      align-items:stretch;
-    }
-    #photosCol{
-      grid-row:1;
-      min-height:0;
-      overflow:hidden;
-    }
-    #controlsCol{
-      grid-row:2;
-      min-height:0;
-      overflow:visible;
-    }
-    #previewCol{
-      grid-row:1 / 3;
-      min-height:0;
-    }
-    #photosCol > .panel{
-      height:100%;
-      min-height:0;
-      display:flex;
-      flex-direction:column;
-      overflow:hidden;
-    }
-    #photosCol .photo-list{
-      display:block;
-      flex:1 1 auto;
-      min-height:0;
-      overflow-y:auto !important;
-      overflow-x:hidden;
-      overscroll-behavior:contain;
-      scrollbar-gutter:stable;
-    }
-    #photosCol .list-footer,
-    #photosCol .dropzone,
-    #photosCol .panel-head{
-      flex:0 0 auto;
-    }
-  }
-
 
   /* v1.7.9 — 새 맞춤 방식 메뉴는 기존 패널 폭을 절대 밀어내지 않는다. */
   .fit-mode-seg{width:100%;min-width:0;}
@@ -933,8 +803,7 @@
   .preview-stage.vertical-preview #canvas{max-height:none;}
 
 
-  /* v1.11.0 — 작업 팔레트 우선 레이아웃
-     사진 조정 컨트롤은 상단 헤더의 빈 공간을 사용하고, 저장부는 한 줄로 압축한다. */
+  /* Desktop toolbar and compact output controls. */
   @media (min-width:701px){
     header.top{
       align-items:center;
@@ -943,29 +812,6 @@
       flex-wrap:nowrap;
     }
     header.top > p{margin-left:auto; flex:none;}
-    #topAdjustDock{
-      flex:1 1 auto;
-      min-width:0;
-      margin:0 18px;
-    }
-    #topAdjustDock[hidden]{display:none !important;}
-    #topAdjustDock #adjustTabContent{
-      display:block;
-      animation:none;
-    }
-    #topAdjustDock #adjustEmptyState{display:none !important;}
-    #topAdjustDock #adjustFieldsWrap{
-      display:grid;
-      grid-template-columns:minmax(170px,1fr) minmax(170px,1fr) auto auto;
-      align-items:center;
-      gap:10px 14px;
-    }
-    #topAdjustDock .adjust-field{margin:0; min-width:0;}
-    #topAdjustDock .adjust-field .field-label{margin-bottom:1px; font-size:11px;}
-    #topAdjustDock input[type="range"]{height:22px;}
-    #topAdjustDock .adjust-btns{display:contents; margin:0;}
-    #topAdjustDock .btn-outline{padding:7px 10px; white-space:nowrap;}
-
     /* 왼쪽은 설정 전용. 조정 탭이 공간을 차지하지 않게 한다. */
     #adjustTabBtn{display:none;}
     #controlTabs button[data-tab="settings"]{pointer-events:none;}
@@ -986,10 +832,9 @@
   }
 
 
-  /* v1.11.1 — 사진 조정은 미리보기 제목과 같은 한 줄에. 저장부도 별도 행을 없애 팔레트 확보 */
+  /* Keep photo adjustments beside the preview title on wide screens. */
   @media (min-width:701px){
     header.top{min-height:0;}
-    #topAdjustDock{display:none !important;}
     .preview-toolbar-head{flex-wrap:nowrap; gap:12px; margin-bottom:10px;}
     #previewAdjustDock{flex:1 1 auto; min-width:0;}
     #previewAdjustDock[hidden]{display:none !important;}
@@ -1017,29 +862,35 @@
 
 
 
-  /* v1.11.2 — wide layout only: 설정을 위, 사진 순서를 아래로.
-     모바일/세로형 좁은 화면의 DOM 흐름(사진 → 설정 → 미리보기)은 그대로 유지한다. */
+  /* ---------- Wide desktop ---------- */
+  /* Settings stay above the scrollable photo list. */
   @media (min-width:1100px), (orientation:landscape) and (min-width:800px){
     .grid{
+      grid-template-columns:minmax(240px, 1fr) 4fr;
       grid-template-areas:
         "controls preview"
-        "photos preview" !important;
-      grid-template-rows:auto minmax(0,1fr) !important;
+        "photos preview";
+      grid-template-rows:auto minmax(0,1fr);
       align-items:stretch;
     }
+    .narrow-col{max-width:none; margin:0;}
+    .panel-narrow{max-width:none;}
     #controlsCol{
-      grid-row:1 !important;
+      grid-row:1;
       min-height:0;
       overflow:visible;
+      align-self:start;
     }
     #photosCol{
-      grid-row:2 !important;
+      grid-row:2;
       min-height:0;
       overflow:hidden;
+      align-self:stretch;
     }
     #previewCol{
-      grid-row:1 / 3 !important;
+      grid-row:1 / 3;
       min-height:0;
+      align-self:start;
     }
     #photosCol > .panel{
       height:100%;
@@ -1049,16 +900,15 @@
       overflow:hidden;
     }
     #photosCol .photo-list{
-      flex:1 1 auto;
+      flex:1 1 0;
       min-height:0;
-      overflow-y:auto !important;
+      max-height:none !important;
+      overflow-y:auto;
       overflow-x:hidden;
+      overscroll-behavior:contain;
+      scrollbar-gutter:stable;
+      padding-right:3px;
     }
-  }
-
-
-  /* v1.11.3 — PC에서 설정을 버튼/탭이 아닌 일반 섹션 제목으로 표시 */
-  @media (min-width:1100px), (orientation:landscape) and (min-width:800px){
     #controlsCol #controlTabs{
       display:flex;
       align-items:center;
@@ -1072,8 +922,8 @@
     }
     #controlsCol #settingsTabBtn{
       flex:0 0 auto;
-      background:transparent !important;
-      color:var(--ink) !important;
+      background:transparent;
+      color:var(--ink);
       border:0;
       border-radius:0;
       padding:0;
@@ -1083,21 +933,7 @@
       cursor:default;
       pointer-events:none;
     }
-    #controlsCol #adjustTabBtn{display:none !important;}
-  }
-
-
-  /* v1.11.5 — compact visible controls; interaction hit areas stay generous */
-
-  /* v1.11.8 — 좌우 작업영역 하단선 통일.
-     오른쪽 미리보기의 실제 높이가 grid 전체 높이를 정하고,
-     설정 아래 남는 높이를 사진 순서 카드가 모두 사용한다. */
-  @media (min-width:1100px), (orientation:landscape) and (min-width:800px){
-    .grid{align-items:stretch;}
-    #controlsCol{align-self:start;}
-    #photosCol{align-self:stretch; min-height:0;}
-    #photosCol > .panel{height:100%; min-height:0;}
-    #photosCol .photo-list{flex:1 1 0; min-height:0; max-height:none !important; overflow-y:auto !important;}
+    #controlsCol #adjustTabBtn{display:none;}
   }
 
   /* v1.11.14 — 하단 정보 정렬만 정리.
@@ -1205,7 +1041,6 @@
 <div class="brand-mark"><svg fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><rect height="18" rx="1.5" width="7" x="3" y="3"></rect><rect height="18" rx="1.5" width="7" x="14" y="3"></rect></svg></div>
 <h1>이음</h1>
 </div>
-<div id="topAdjustDock" hidden></div>
 <p>사진을 순서대로 이어 하나의 이미지로 만듭니다.</p>
 </header>
 <div class="grid">
@@ -1907,7 +1742,6 @@
   }
 
   photoList.addEventListener('scroll', syncPhotoListOverflowCue, {passive:true});
-  window.addEventListener('resize', () => requestAnimationFrame(syncPhotoListHeight));
 
   photoList.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-act]');
@@ -1944,8 +1778,10 @@
     pushHistory();
   });
 
-  /* drag reorder (mouse AND touch, via the handle on the left of each row) — native HTML5
-     drag-and-drop (dragstart/dragover/drop) never fires from a touch gesture on most mobile
+  /* ---------- Photo list reordering ----------
+     Pointer-based sorting works consistently for mouse, touch, and pen. */
+  (() => {
+  /* Native HTML5 drag-and-drop does not fire from a touch gesture on most mobile
      browsers, so a phone/tablet user pressing the handle couldn't reorder photos at all.
      Pointer Events fire the same way for mouse, touch and pen, so one implementation covers
      both. Beyond just working on touch, the dragged row now floats free of the list —
@@ -2064,6 +1900,7 @@
   }
   document.addEventListener('pointerup', endListDrag);
   document.addEventListener('pointercancel', endListDrag);
+  })();
 
   /* ---------- settings wiring ---------- */
   function setActiveSeg(container, val){
@@ -3050,7 +2887,6 @@
   const adjustTabContent = el('adjustTabContent');
   const adjustEmptyState = el('adjustEmptyState');
   const adjustFieldsWrap = el('adjustFieldsWrap');
-  const topAdjustDock = el('topAdjustDock');
   const previewAdjustDock = el('previewAdjustDock');
   const controlsPanel = controlTabs.closest('.panel');
   function placeAdjustPanel(){
@@ -3062,7 +2898,6 @@
     }
   }
   placeAdjustPanel();
-  window.addEventListener('resize', placeAdjustPanel);
   function setActiveTab(tab){
     placeAdjustPanel();
     const desktop = !window.matchMedia('(max-width:700px)').matches;
@@ -3070,7 +2905,6 @@
     // PC에서는 설정은 왼쪽에 계속 유지하고 사진 조정만 헤더 도크에 띄운다.
     settingsTabContent.hidden = desktop ? false : tab !== 'settings';
     adjustTabContent.hidden = tab !== 'adjust';
-    topAdjustDock.hidden = true;
     previewAdjustDock.hidden = !(desktop && tab === 'adjust');
     document.getElementById('photosCol').classList.toggle('adjust-mode', !desktop && tab === 'adjust');
     requestAnimationFrame(() => { syncPhotoListHeight(); schedulePreviewFit(); });
@@ -3260,11 +3094,6 @@
       }
     }
   });
-  window.addEventListener('resize', () => {
-    applyPreviewZoom();
-    if (editingId) positionEditOverlay();
-    if (eyeGuideOn) positionEyeGuide();
-  });
 
   // sliders fire 'input' continuously while being dragged and one final 'change' on
   // release — live-preview during the drag, then one full-quality settle render on
@@ -3424,12 +3253,6 @@
     if(editingId)positionEditOverlay();
     if(eyeGuideOn)positionEyeGuide();
   });
-  let previewResizeTimer=null;
-  window.addEventListener('resize',()=>{
-    if(previewZoomMode!=='fit')return;
-    clearTimeout(previewResizeTimer);
-    previewResizeTimer=setTimeout(()=>{applyPreviewZoom();if(editingId)positionEditOverlay();if(eyeGuideOn)positionEyeGuide();},80);
-  });
 
   let eyeDragging = false;
   eyeGuideHandle.addEventListener('pointerdown', (e) => {
@@ -3463,6 +3286,8 @@
     // No slot: allow bubbling to previewStage, which clears the selection.
   });
 
+  /* ---------- Canvas editing gestures ---------- */
+  (() => {
   function dist(a, b){ return Math.hypot(a.x - b.x, a.y - b.y); }
   function mid(a, b){ return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; }
 
@@ -3630,6 +3455,7 @@
       zone.addEventListener('pointerup', onUp);
     });
   });
+  })();
 
   /* ---------- keyboard shortcuts ----------
      Only act on the currently selected/adjusted photo (editingId).
@@ -3701,46 +3527,9 @@
     }
   });
 
-  /* ---------- export ---------- */
-  // on a phone, the platform's own share sheet is what can actually put the file
-  // straight into 사진첩/Photos — the generic file-download path below (both the
-  // `downloads` capability and a plain <a download>) always lands in the Files
-  // app / Downloads folder instead, on iOS *and* Android, no matter what MIME
-  // type or filename we send. There's no web API that writes into the photo
-  // library directly (that's a deliberate OS privacy boundary), so this is the
-  // closest real fix: hand the image to navigator.share() when the platform
-  // supports sharing files, so the user picks "이미지 저장"/"Save Image" from the
-  // sheet claude.ai's own doesn't offer. Only actually available on
-  // touch/mobile browsers in practice — desktop naturally falls through below.
-  //
-  // navigator.share() only works while the tap that triggered it is still within its
-  // "user activation" window — a few seconds at most, and it does NOT survive an async
-  // gap. canvas.toBlob() is exactly such a gap: it's a callback, not something that
-  // resolves instantly, and how long it takes scales with how much there is to encode.
-  // A quick 가로 join of one or two photos usually finishes fast enough that activation
-  // is still live when the callback runs, so share() works — but a tall 세로 join
-  // stacking several full-res photos takes noticeably longer to encode, the activation
-  // window runs out first, share() then throws (silently, from the user's point of
-  // view), and it falls through to the Downloads-folder path below. That's the
-  // "세로로 하니까 다운로드 폴더로 들어가는" behavior — it was never about direction as
-  // such, just about which composites take long enough to encode.
-  // Fix: if activation has already expired by the time the blob is ready, don't bother
-  // calling share() (it would just fail) — stash the finished file and ask for one more
-  // tap. That second tap calls share() immediately, with no async work in between, so
-  // its own fresh activation window is still there when share() actually runs.
-  // A diagnostic build (temporarily) surfaced the real reason here: on the published
-  // Artifact, navigator.canShare({files}) returns false EVEN for a tiny 0.1MB jpeg —
-  // ruling out both the size theory and the activation-timing theory above. A published
-  // Artifact runs in a sandboxed iframe that mediates every file-related action itself
-  // (that's exactly why the platform's own "Let this artifact download a file?" consent
-  // dialog is what actually shows up for the Downloads path) — it doesn't delegate the
-  // raw Web Share permission to the page, so canShare() is false there no matter what's
-  // being shared. There is no capability this page can declare to get that permission;
-  // `downloads` (landing in Files/Downloads, with that consent prompt) is the only file
-  // hand-off channel a published Artifact actually has. The share attempt below is kept
-  // as a no-cost fallback for any OTHER hosting context that isn't sandboxed this way
-  // (e.g. this same file saved and opened directly in Safari) — see EXPORT_HELP for
-  // what that path actually looks like for a real user.
+  /* ---------- export ----------
+     Mobile uses the native share sheet when file sharing is available; every other
+     environment falls back to the host download bridge or a standard download link. */
   let preparedShare = null; // { blob, filename, key } from a tap whose activation expired
   function currentRenderKey(){
     return canvas.width + 'x' + canvas.height + '|' + settings.format + '|' +
@@ -3759,11 +3548,7 @@
       }
       return;
     }
-    // not running inside the Claude Artifact sandbox at all (window.claude never showed
-    // up) — e.g. this same page saved and opened directly as a file in a regular
-    // browser. A plain anchor download works fine there; it's exactly the ordinary
-    // browser feature the `downloads` capability exists to reach FROM INSIDE the
-    // sandboxed iframe, so it's only needed as a fallback once that bridge is absent.
+    // Regular browser fallback when no host download bridge is available.
     try {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -3781,17 +3566,13 @@
     if (photos.length === 0) return;
     const mime = settings.format === 'jpeg' ? 'image/jpeg' : 'image/png';
     const ext = settings.format === 'jpeg' ? 'jpg' : 'png';
-    // v1.11.21 — PC는 Web Share를 지원하더라도 공유 시트를 띄우지 않고
-    // 브라우저의 일반 다운로드 경로(Downloads)로 바로 저장한다.
-    // 모바일/터치 환경에서만 공유 시트를 사용해 사진 앱 저장 선택지를 제공한다.
+    // Keep desktop on the normal download path; touch devices may use the share sheet.
     const isMobileShareTarget =
       window.matchMedia('(pointer:coarse)').matches ||
       /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     const canShareFiles = isMobileShareTarget && !!(navigator.share && navigator.canShare);
 
-    // second tap after a "저장 준비 완료" toast: share the already-encoded file RIGHT NOW,
-    // synchronously in this click handler, before any await — this is the one call in
-    // this whole flow that must not have an async gap in front of it.
+    // The prepared file is shared synchronously on a second tap to preserve user activation.
     if (canShareFiles && preparedShare && preparedShare.key === currentRenderKey()) {
       const { blob, filename } = preparedShare;
       preparedShare = null;
@@ -3891,10 +3672,25 @@
     fitPreviewRAF = requestAnimationFrame(fitPreviewToViewport);
   }
 
-  window.addEventListener('resize', schedulePreviewFit, {passive:true});
-  window.addEventListener('orientationchange', schedulePreviewFit, {passive:true});
+  /* One layout pass per frame keeps resize, orientation changes, and mobile browser
+     chrome changes from repeatedly measuring and redrawing the same canvas. */
+  let layoutChangeRAF = 0;
+  function handleLayoutChange(){
+    cancelAnimationFrame(layoutChangeRAF);
+    layoutChangeRAF = requestAnimationFrame(() => {
+      placeAdjustPanel();
+      syncPhotoListHeight();
+      schedulePreviewFit();
+      applyPreviewZoom();
+      if (editingId) positionEditOverlay();
+      if (eyeGuideOn) positionEyeGuide();
+    });
+  }
+
+  window.addEventListener('resize', handleLayoutChange, {passive:true});
+  window.addEventListener('orientationchange', handleLayoutChange, {passive:true});
   if(window.visualViewport){
-    window.visualViewport.addEventListener('resize', schedulePreviewFit, {passive:true});
+    window.visualViewport.addEventListener('resize', handleLayoutChange, {passive:true});
   }
 
   /* ---------- init ---------- */
@@ -3903,7 +3699,7 @@
   ratioCustomHint.hidden = settings.ratio !== 'custom';
   renderComposite();
   pushHistory(); // baseline (empty) state so the very first add can be undone back to nothing
-  requestAnimationFrame(schedulePreviewFit);
+  requestAnimationFrame(handleLayoutChange);
 
   if (window.claude && window.claude.hot) {
     window.claude.hot.ready ? window.claude.hot.ready(() => {}) : null;
