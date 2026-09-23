@@ -5,8 +5,8 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
 <title>이음</title>
-<!-- v1.11.3 desktop settings heading -->
-<!-- v1.11.2 settings-first desktop layout -->
+<!-- desktop settings heading -->
+<!-- settings-first desktop layout -->
 <script type="text/javascript" nonce="72a0ab2de3114d5d84730eb2c9d" src="//local.adguard.org?ts=1789777939972&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000013f882069c2f51da01672f2c%26fn%3Dieum_v1_11_7_vertical_zoom_controls.html%26cd%3Dattachment%26ts%3D497161%26p%3Dfs%26cid%3D1%26sig%3D08bb77f555daca3f0c9b12b01ecd4e6ed29fbe37aa399953e0f11eae6b52980b%26v%3D0&amp;app=com.google.Chrome&amp;css=2&amp;js=1&amp;rel=0&amp;rji=0&amp;sbe=1"></script><script type="text/javascript" nonce="72a0ab2de3114d5d84730eb2c9d" src="//local.adguard.org?ts=1789777939972&amp;name=AdGuard%20Extra&amp;type=user-script"></script><script type="text/javascript" nonce="72a0ab2de3114d5d84730eb2c9d" src="//local.adguard.org?ts=1789770739815&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000078448206852a1ac802c90017%26fn%3Dieum_v1_11_0_workspace_palette.html%26cd%3Dattachment%26ts%3D497159%26p%3Dfs%26cid%3D1%26sig%3Da90087e14415803fa8aef8e173ba472cd76d12326051fbe7a1edf2315e1ee5ef%26v%3D0&amp;app=com.apple.Safari&amp;css=2&amp;js=1&amp;rel=0&amp;rji=0&amp;sbe=1"></script><script type="text/javascript" nonce="72a0ab2de3114d5d84730eb2c9d" src="//local.adguard.org?ts=1789770739815&amp;name=AdGuard%20Extra&amp;type=user-script"></script></head>
 <body>
 <style>
@@ -517,7 +517,7 @@
   .edit-rotate-zone[data-corner="sw"]{left:0; top:100%;}
   .edit-rotate-zone[data-corner="se"]{left:100%; top:100%;}
 
-  /* v1.11.13 — touch controls are deliberately separated:
+  /* touch controls are deliberately separated:
      1 finger on photo = move, 2 fingers = zoom, corners = straighten/rotate.
      The old one-finger corner zoom handles are hidden on touch devices so a single
      finger can never change zoom. */
@@ -643,7 +643,7 @@
   }
   [hidden]{display:none !important;}
 
-  /* v1.7.9 — 새 맞춤 방식 메뉴는 기존 패널 폭을 절대 밀어내지 않는다. */
+  /* 새 맞춤 방식 메뉴는 기존 패널 폭을 절대 밀어내지 않는다. */
   .fit-mode-seg{width:100%;min-width:0;}
   .fit-mode-seg button{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:10px;padding-right:10px;}
   #controlsCol .panel,#controlsCol .field,#controlsCol .seg,#controlsCol .pillrow{min-width:0;max-width:100%;box-sizing:border-box;}
@@ -669,7 +669,7 @@
 
 
 
-  /* v1.7.15 — max-height is set from the ACTUAL first 4 rendered rows by JS.
+  /* max-height is set from the ACTUAL first 4 rendered rows by JS.
      This avoids brittle hard-coded card heights across PC/mobile/font scaling. */
   #photosCol .photo-list{
     overflow-y:auto !important;
@@ -679,7 +679,7 @@
   }
 
 
-  /* v1.7.18 — 목록에 더 많은 사진이 있다는 시각적 단서 */
+  /* 목록에 더 많은 사진이 있다는 시각적 단서 */
   #photoList{
     scrollbar-width:thin;
     scrollbar-color:rgba(91,101,116,.45) transparent;
@@ -700,7 +700,7 @@
   }
 
 
-  /* v1.8.0 CLEAN — mobile-only polish; desktop layout remains unchanged */
+  /* mobile-only polish; desktop layout remains unchanged */
   @media (max-width:700px){
     #photosCol .photo-item .icon-btn{min-width:38px;min-height:38px;}
     #photosCol .photo-item .stack-btns button{min-width:30px;min-height:20px;}
@@ -711,11 +711,11 @@
   }
 
 
-  /* v1.8.1 — 고급 설정은 비율과 무관하게 항상 표시 */
+  /* 고급 설정은 비율과 무관하게 항상 표시 */
   #settingsTabContent #advancedDetails{display:block;}
 
 
-  /* v1.8.2 — 기존 '사진을 끌어서...' 안내만 미리보기 아래로 이동 */
+  /* 기존 '사진을 끌어서...' 안내만 미리보기 아래로 이동 */
   .preview-hint{
     margin:8px 2px 2px;
     text-align:center;
@@ -723,7 +723,7 @@
   }
 
 
-  /* v1.8.3 — 저장 직전 출력 상태를 함께 확인 */
+  /* 저장 직전 출력 상태를 함께 확인 */
   .readout{gap:8px;flex-wrap:wrap;}
   #outputReadout{opacity:.72;}
   @media(max-width:700px){
@@ -731,7 +731,7 @@
   }
 
 
-  /* v1.8.4 — keyboard shortcuts */
+  /* keyboard shortcuts */
   .shortcut-note{
     margin-top:10px;
     font-size:10.5px;
@@ -743,25 +743,14 @@
 
 
 
-  /* v1.11.10 — mobile-only explicit photo add button in preview header */
-  .mobile-add-photo{display:none;}
-  @media(max-width:700px){
-    .mobile-add-photo{
-      display:inline-flex;align-items:center;justify-content:center;
-      /* 눈높이/실행취소 아이콘 버튼과 동일한 30px 규격 */
-      width:30px;height:30px;min-width:30px;min-height:30px;max-width:30px;max-height:30px;
-      padding:0;border-radius:9px;touch-action:manipulation;
-    }
-    .mobile-add-photo svg{width:15px;height:15px;}
-  }
 
-  /* v1.9.0 — 미리보기 자체를 더 큰 드롭 영역으로 */
+  /* 미리보기 자체를 더 큰 드롭 영역으로 */
   @media(max-width:700px){
     .preview-stage{min-height:260px;}
   }
 
 
-  /* v1.9.3 — preview owns photo import; left column is ordering only */
+  /* preview owns photo import; left column is ordering only */
   .empty-preview{
     cursor:pointer;
     width:100%;
@@ -780,7 +769,7 @@
 
 
 
-  /* v1.9.6 — viewport Fit to Screen
+  /* viewport Fit to Screen
      기기명이 아니라 실제 브라우저의 남은 세로 공간에 맞춘다. */
   @media (min-width:701px){
     .preview-stage{
@@ -794,21 +783,21 @@
   }
 
 
-  /* v1.9.8 — 미리보기 프레임 밖으로 캔버스/편집 오버레이가 튀어나오지 않도록 고정 */
+  /* 미리보기 프레임 밖으로 캔버스/편집 오버레이가 튀어나오지 않도록 고정 */
   .preview-stage{overflow:hidden;}
   .canvas-wrap{max-width:100%; max-height:100%;}
   #canvas{max-width:100%; max-height:100%; object-fit:contain;}
 
-  /* v1.9.9 — PC 미리보기 높이는 viewport가 결정. 왼쪽 사진/설정 열 높이와 분리 */
+  /* PC 미리보기 높이는 viewport가 결정. 왼쪽 사진/설정 열 높이와 분리 */
   @media (min-width:1100px), (orientation:landscape) and (min-width:800px){
     #previewCol{align-self:start;}
     #previewCol > .panel{height:auto;}
   }
 
-  /* v1.10.0 — 회색 미리보기 여백은 양 끝 사진 추가 영역 */
+  /* 회색 미리보기 여백은 양 끝 사진 추가 영역 */
   .preview-stage{cursor:default;}
 
-  /* v1.10.1 — 세로 잇기 미리보기: 전체 높이를 억지로 Fit하지 않고 폭 기준으로 표시 + 내부 스크롤 */
+  /* 세로 잇기 미리보기: 전체 높이를 억지로 Fit하지 않고 폭 기준으로 표시 + 내부 스크롤 */
   .preview-stage.vertical-preview{
     overflow-x:hidden;
     overflow-y:auto;
@@ -954,7 +943,7 @@
     #controlsCol #adjustTabBtn{display:none;}
   }
 
-  /* v1.11.14 — 하단 정보 정렬만 정리.
+  /* 하단 정보 정렬만 정리.
      출력정보/단축키/개인정보/저작권의 시각적 축을 하나로 맞춘다. */
   .preview-bottom-bar .readout{
     justify-content:center;
@@ -1017,7 +1006,7 @@
   }
 
 
-  /* v1.11.15 — 출력 모드/포맷만 미리보기 하단 정중앙에 고정 */
+  /* 출력 모드/포맷만 미리보기 하단 정중앙에 고정 */
   .preview-bottom-bar{
     position:relative;
   }
@@ -1053,7 +1042,7 @@
   }
 
 
-  /* v1.11.11 — 사진을 선택(조정 모드)할 때 미리보기 크기가 바뀌며 흔들리지 않도록 고정
+  /* 사진을 선택(조정 모드)할 때 미리보기 크기가 바뀌며 흔들리지 않도록 고정
      1) 안내 문구는 숨길 때도 자리를 차지해 미리보기 높이가 그대로 유지된다.
      2) 헤더 높이를 조정 도크가 떠도 같은 높이로 고정한다.
      3) 미리보기 열이 도크 내용 폭만큼 넓어져 가로 스크롤이 생기던 문제를 막는다. */
@@ -1331,25 +1320,18 @@
   };
 
   const RATIOS = { free: null, '1:1': 1, '4:5': 4/5, '3:4': 3/4, '2:3': 2/3 };
-  // v1.7.8: 최종 출력 긴 축에 비례하는 실제 흰 간격.
+  // 최종 출력 긴 축에 비례하는 실제 흰 간격.
   // 1600px 출력 기준: 얇게 4px / 보통 8px / 넓게 16px.
   const OUTPUT_GAP_RATIOS = { none: 0, thin: 0.0025, normal: 0.005, wide: 0.01 };
-  // 샤프닝은 사진별 0~10. 기존 '강하게'(1.3)를 10단계 상한으로 사용.
-  const SHARPEN_MAX_AMOUNT = 1.3;
   function sharpenLevel(v){
     if (typeof v === 'number') return Math.max(0, Math.min(10, v));
     // 이전 버전 history/state 호환
     return ({none:0, light:3, normal:6, strong:10})[v] ?? 0;
   }
-  function sharpenAmount(v){ return SHARPEN_MAX_AMOUNT * sharpenLevel(v) / 10; }
   const EYE_LEVEL = 0.4;
   // Preview/layout coordinate baseline only. Never use this as source resolution.
   const RATIO_BASELINE = 1000;
   const MAX_ZOOM = 5;
-  // the gap's floor scales with the chosen OUTPUT size (a ratio, not a raw pixel count) —
-  // this keeps it proportional to what the user picked, while still staying comfortably
-  // above the ~few-px smear that JPEG's compression blocks put on a too-thin white line
-  const MIN_GAP_FRACTION = 0.004;
   // Interactive rendering is coalesced to one draw per animation frame.  Do not replace
   // the visible canvas with a lower-resolution version while dragging: although faster,
   // that makes the browser recalculate its intrinsic box and causes a distracting size
@@ -1381,7 +1363,7 @@
     ratioOrientation: 'portrait'
   };
 
-  // v1.7.7: 방향별 기본 비율은 사용자가 비율을 직접 고르기 전까지만 자동 적용.
+  // 방향별 기본 비율은 사용자가 비율을 직접 고르기 전까지만 자동 적용.
   let ratioTouchedByUser = false;
 
   // resolves the active frame ratio, including the free-form "사용자 지정" case
@@ -1580,16 +1562,6 @@
   });
 
 
-  // v1.11.10 — 모바일에서는 좁은 좌/우 여백 대신 확실한 + 버튼으로도 추가.
-  // 기존 좌/우 여백 추가 동작은 그대로 유지하며, + 버튼은 항상 맨 뒤에 삽입한다.
-  const mobileAddPhotoBtn = el('mobileAddPhotoBtn');
-  if (mobileAddPhotoBtn) {
-    mobileAddPhotoBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      openPreviewInsertPicker(photos.length);
-    });
-  }
   [[mobileInsertLeftBtn, 0], [mobileInsertRightBtn, () => photos.length]].forEach(([btn, index]) => {
     if (!btn) return;
     btn.addEventListener('click', (e) => {
@@ -1722,7 +1694,7 @@
 
   /* ---------- list rendering ---------- */
 
-  // v1.11.8 — PC에서는 미리보기 높이까지 남는 공간을 사진 목록이 전부 사용한다.
+  // PC에서는 미리보기 높이까지 남는 공간을 사진 목록이 전부 사용한다.
   // 큰 모니터는 더 많은 행을 보여주고, 공간이 부족할 때만 목록 내부가 스크롤된다.
   // 모바일/좁은 화면은 기존의 컴팩트 목록(2장)을 유지한다.
   function syncPhotoListHeight(){
@@ -2369,112 +2341,6 @@
     ctx.restore();
   }
 
-  /* unsharp mask: blur a copy, then push each pixel away from its blurred neighbor by
-     `amount` — counteracts the softness that resizing photos down (or up) introduces.
-     Radius scales gently with the export's long side so it stays a sensible few-pixel
-     kernel whether exporting small or large.
-     Applied per PHOTO SLOT (not the whole canvas): sharpening the artificial white
-     seams between photos too would ring/halo right along those edges, so each slot's
-     blur sample is confined to that slot's own rectangle.
-
-     The blur itself is a hand-rolled box blur (3 passes, horizontal+vertical, sliding-
-     window sum so cost is independent of radius) rather than the canvas 2D `ctx.filter =
-     'blur()'` this used before. That canvas Filter Effects API is a genuinely spotty
-     feature outside a full desktop browser — several mobile/embedded WebViews either
-     don't implement it at all or silently accept the property without actually blurring
-     anything, which makes `blurred` end up pixel-identical to `orig`: the whole
-     `(orig - blurred) * amount` term then evaluates to zero everywhere, so the feature
-     looks completely inert ("전혀 안 먹는" — nothing happens, not even a little) despite
-     every value along the way (radius, amount) being correct and the code path running.
-     A manual box blur only touches plain arrays of numbers, so it produces the same
-     result on literally any JS engine that can run a for-loop — there's no filter
-     support to silently lack. */
-  function clampByte(v){ return v < 0 ? 0 : v > 255 ? 255 : v; }
-  function boxBlurH(src, dst, w, h, radius){
-    const size = radius * 2 + 1;
-    for (let y = 0; y < h; y++){
-      const rowStart = y * w * 4;
-      let rSum = 0, gSum = 0, bSum = 0;
-      for (let k = -radius; k <= radius; k++){
-        const xx = k < 0 ? 0 : (k >= w ? w - 1 : k);
-        const idx = rowStart + xx * 4;
-        rSum += src[idx]; gSum += src[idx+1]; bSum += src[idx+2];
-      }
-      for (let x = 0; x < w; x++){
-        const idx = rowStart + x * 4;
-        dst[idx] = rSum / size; dst[idx+1] = gSum / size; dst[idx+2] = bSum / size; dst[idx+3] = src[idx+3];
-        const leaveX = x - radius, enterX = x + radius + 1;
-        const lx = leaveX < 0 ? 0 : leaveX, ex = enterX >= w ? w - 1 : enterX;
-        const li = rowStart + lx * 4, ei = rowStart + ex * 4;
-        rSum += src[ei] - src[li]; gSum += src[ei+1] - src[li+1]; bSum += src[ei+2] - src[li+2];
-      }
-    }
-  }
-  function boxBlurV(src, dst, w, h, radius){
-    const size = radius * 2 + 1;
-    for (let x = 0; x < w; x++){
-      let rSum = 0, gSum = 0, bSum = 0;
-      for (let k = -radius; k <= radius; k++){
-        const yy = k < 0 ? 0 : (k >= h ? h - 1 : k);
-        const idx = (yy * w + x) * 4;
-        rSum += src[idx]; gSum += src[idx+1]; bSum += src[idx+2];
-      }
-      for (let y = 0; y < h; y++){
-        const idx = (y * w + x) * 4;
-        dst[idx] = rSum / size; dst[idx+1] = gSum / size; dst[idx+2] = bSum / size; dst[idx+3] = src[idx+3];
-        const leaveY = y - radius, enterY = y + radius + 1;
-        const ly = leaveY < 0 ? 0 : leaveY, ey = enterY >= h ? h - 1 : enterY;
-        const li = (ly * w + x) * 4, ei = (ey * w + x) * 4;
-        rSum += src[ei] - src[li]; gSum += src[ei+1] - src[li+1]; bSum += src[ei+2] - src[li+2];
-      }
-    }
-  }
-  // 3 passes of box blur (H then V each pass) closely approximates a Gaussian blur of
-  // similar strength, at a fraction of the cost of a true per-pixel Gaussian kernel.
-  function boxBlurApprox(data, w, h, radius){
-    let cur = new Uint8ClampedArray(data);
-    let scratch = new Uint8ClampedArray(cur.length);
-    for (let pass = 0; pass < 3; pass++){
-      boxBlurH(cur, scratch, w, h, radius);
-      [cur, scratch] = [scratch, cur];
-      boxBlurV(cur, scratch, w, h, radius);
-      [cur, scratch] = [scratch, cur];
-    }
-    return cur;
-  }
-  function applySharpenRect(ctx, canvasEl, sx, sy, sw, sh, amount, refLong){
-    sx = Math.max(0, Math.round(sx));
-    sy = Math.max(0, Math.round(sy));
-    sw = Math.min(canvasEl.width - sx, Math.round(sw));
-    sh = Math.min(canvasEl.height - sy, Math.round(sh));
-    if (!amount || sw < 2 || sh < 2) return;
-    // radius was tied so tightly to export resolution (refLong/900, capped near 1-5px)
-    // that at typical output sizes it worked out to just ~1-2px in canvas-pixel space —
-    // once the on-screen preview itself is CSS-scaled down to fit the panel (routinely
-    // 40-60% of the canvas's real pixel width), that shrinks below a single visible
-    // screen pixel, so the effect was real (confirmed by an actual pixel diff) but
-    // invisible to the eye at normal viewing size. Widened the floor/ceiling so the
-    // effect survives that downscale and is actually visible in the preview, not just
-    // in a pixel-level diff of the exported file.
-    // a SECOND, bigger problem on top of that: unsharp masking only reacts to CURVATURE
-    // in the image (how much a pixel deviates from its blurred neighborhood) — a photo
-    // whose softness plays out over a wide, gradual transition (typical of ordinary lens/
-    // motion softness, not just crisp compression edges) has very little curvature inside
-    // a small radius, so an 8px-max kernel barely perceives it at all: measured against a
-    // deliberately soft test photo, the old 8px cap moved pixels by ~1 unit at most, while
-    // a ~14-18px kernel on the same photo visibly sharpens it. Capping so low made the
-    // feature look broken on exactly the photos it's meant to help.
-    const radius = Math.round(clamp(refLong / 140, 4, 18));
-    const orig = ctx.getImageData(sx, sy, sw, sh);
-    const od = orig.data;
-    const bd = boxBlurApprox(od, sw, sh, radius);
-    for (let i = 0; i < od.length; i += 4) {
-      od[i]   = clampByte(od[i]   + (od[i]   - bd[i])   * amount);
-      od[i+1] = clampByte(od[i+1] + (od[i+1] - bd[i+1]) * amount);
-      od[i+2] = clampByte(od[i+2] + (od[i+2] - bd[i+2]) * amount);
-    }
-    ctx.putImageData(orig, sx, sy);
-  }
 
   /* ---------- rendering the composite ---------- */
   let renderTimer = null;
@@ -2553,7 +2419,7 @@
     let spacing = 0, compositeLong = slotLongSum;
     const compositeCross = commonSize;
     let { finalScale, target } = resolveOutputScale(items, compositeLong);
-    // v1.7.8 — 간격은 '사진/프레임 크기'가 아니라 최종 결과물의 긴 축에 비례.
+    // 간격은 '사진/프레임 크기'가 아니라 최종 결과물의 긴 축에 비례.
     // 목표 긴 축에서 원하는 gap px를 먼저 정한 뒤, 내부 좌표계 spacing으로 역산한다.
     if (settings.spacingMode !== 'none' && n > 1) {
       const ratio = OUTPUT_GAP_RATIOS[settings.spacingMode] || 0;
@@ -2612,10 +2478,6 @@
 
   function updateRenderedPreview(ctx, geometry, live){
     if (!live) {
-      lastSlots.forEach(slot => {
-        const amount = 0; // v1.7.12: 이음은 출력/개별 샤프닝을 하지 않음
-        if (amount > 0) applySharpenRect(ctx, canvas, slot.x, slot.y, slot.w, slot.h, amount, geometry.finalLong);
-      });
       dimsReadout.textContent = canvas.width + ' × ' + canvas.height + ' px';
       updateSizeEstimate();
       applyPreviewZoom();
@@ -2665,10 +2527,8 @@
   const frameDropOverlay=el('frameDropOverlay');
   const emptySlotDrop=el('emptySlotDrop');
   const insertDropCue=el('insertDropCue');
-  let activeInsertIndex=null;
 
   function clearInsertCue(){
-    activeInsertIndex=null;
     insertDropCue.classList.remove('show');
     insertDropCue.hidden=true;
   }
@@ -2707,7 +2567,6 @@
 
   function paintInsertCue(ins){
     if(!ins){clearInsertCue();return;}
-    activeInsertIndex=Math.max(0,Math.min(photos.length,ins.index));
     const wr=canvasWrap.getBoundingClientRect();
     const cr=canvas.getBoundingClientRect();
     insertDropCue.hidden=false;
@@ -3119,7 +2978,7 @@
     // A real drag/pinch is an adjustment, not a deselection click.
     if (dragMoved) return;
 
-    // v1.9.8 — 사진 조정 중에는 미리보기의 어느 곳을 클릭해도 선택 취소.
+    // 사진 조정 중에는 미리보기의 어느 곳을 클릭해도 선택 취소.
     // 예전처럼 회색 여백/간격을 정확히 눌러야 할 필요가 없다.
     if (editingId) { exitEdit(); return; }
 
@@ -3136,7 +2995,7 @@
       return; // 사진 사이 간격은 삽입 클릭으로 쓰지 않는다.
     }
 
-    // v1.11.9 — 방향과 관계없이 회색 미리보기의 좌/우 여백으로 양 끝에 사진 추가.
+    // 방향과 관계없이 회색 미리보기의 좌/우 여백으로 양 끝에 사진 추가.
     // 왼쪽 여백 = 맨 앞(세로 잇기에서는 위), 오른쪽 여백 = 맨 뒤(세로 잇기에서는 아래).
     // 세로 잇기에서도 위/아래 여백은 추가 영역으로 쓰지 않아 조작 규칙을 통일한다.
     if (photos.length && rect.width && rect.height) {
@@ -3263,7 +3122,7 @@
     const availH=Math.max(1,previewStage.clientHeight-(parseFloat(st.paddingTop)||0)-(parseFloat(st.paddingBottom)||0));
 
     if(verticalPreview){
-      // v1.11.7 — 세로 잇기에서도 상단의 맞춤 / 100 / 80 / 60 / 40 배율을 그대로 적용한다.
+      // 세로 잇기에서도 상단의 맞춤 / 100 / 80 / 60 / 40 배율을 그대로 적용한다.
       // 맞춤은 평상시에는 전체 결과를 팔레트에 맞추고, 사진 조정 중에는 선택 사진이
       // 작업하기 좋은 크기로 보이도록 맞춘다. 수동 배율을 누르면 조정 중에도 그 값을 우선한다.
       if(previewZoomMode==='fit'){
@@ -3690,14 +3549,13 @@
     const previewPanel = previewStage.closest('.panel');
     if(!previewPanel) return;
 
-    // v1.9.9 — IMPORTANT: never use document.body.bottom here.
+    // IMPORTANT: never use document.body.bottom here.
     // The left photo/settings column can become taller when photos are added; measuring the
     // whole page made that unrelated height look like "content below the preview", so the
     // gray preview stage shrank every time the photo list/settings grew.
     // Measure ONLY the preview column's own fixed chrome below the stage instead.
     const privacy = previewPanel.querySelector('.privacy-note');
     const tail = privacy || previewPanel.querySelector('.shortcut-note') || previewPanel.querySelector('.export-row');
-    const panelRect = previewPanel.getBoundingClientRect();
     const tailRect = tail ? tail.getBoundingClientRect() : stageRect;
     const panelStyle = getComputedStyle(previewPanel);
     const panelBottomPad = parseFloat(panelStyle.paddingBottom) || 0;
@@ -3762,7 +3620,7 @@
 })();
 
 
-  // v1.7 — 왼쪽 사진 추가 영역은 '클릭해서 열기' 전용.
+  // 왼쪽 사진 추가 영역은 '클릭해서 열기' 전용.
   // 왼쪽 목록 내부의 기존 사진 드래그 정렬은 건드리지 않는다.
   (function(){
     const dz=document.getElementById('dropzone');
