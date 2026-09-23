@@ -2428,20 +2428,8 @@
     return fixedAR !== null ? fixedAR : (eff.w / eff.h);
   }
 
-  function renderComposite(opts){
-    const live = !!(opts && opts.live);
-    if (photos.length === 0) {
-      canvas.hidden = true;
-      emptyPreview.style.display = '';
-      dimsReadout.textContent = '—';
-      sizeReadout.textContent = '—';
-      exportBtn.disabled = true;
-      lastSlots = [];
-      if (editingId) exitEdit();
-      if (eyeGuideOn) positionEyeGuide();
-      return;
-    }
-
+  /* ---------- composite renderer ---------- */
+  function buildRenderItems(){
     const fixedAR = settings.fitMode === 'original' ? null : getFixedAR();
     let commonSize;
     if (settings.fitMode === 'original') {
@@ -2455,10 +2443,6 @@
       commonSize = settings.commonSize || RATIO_BASELINE;
     }
 
-    const ctx = canvas.getContext('2d');
-    const n = photos.length;
-    lastSlots = [];
-
     const items = photos.map((p) => {
       const rec = store.get(p.id);
       const eff = getEffectiveImage(rec, p.rotation);
@@ -2468,31 +2452,22 @@
       const slotLong = settings.direction === 'vertical' ? commonSize / AR : commonSize * AR;
       return { p, eff, AR, slotCross, slotLong };
     });
+    return { items, commonSize };
+  }
 
-    const slotLongSum = items.reduce((s, it) => s + it.slotLong, 0);
-    let spacing = 0;
-    let compositeLong = slotLongSum + spacing * (n - 1);
-    const compositeCross = commonSize;
-
+  function resolveOutputScale(items, compositeLong){
     let finalScale, target;
     if (settings.outputMode === 'original') {
-      // v1.11.20 — "최대 크기"는 가장 해상도가 넉넉한 사진을 기준으로 정한다.
-      // 작은 사진/강하게 크롭한 사진 때문에 합성 전체가 함께 작아지지 않는다.
-      // 부족한 사진은 해당 슬롯에서만 업스케일되어 화질을 희생하고,
-      // 큰 사진의 해상도와 전체 결과 크기는 유지한다.
+      // "최대 크기"는 가장 해상도가 넉넉한 사진을 기준으로 정한다. 편집된 크롭은
+      // 출력 전체 크기에 영향을 주지 않고, 해당 슬롯의 화질에만 영향을 준다.
       let referenceNativeScale = 0;
       items.forEach((it) => {
-        // "최대 크기" is an output-size policy, not a crop-size policy.  A zoomed,
-        // rotated, or perspective-corrected edit must not make the whole composite
-        // smaller; it only means that particular slot may need to be upscaled.
         const cropForScale = { ...it.p.crop, z:1, cx:.5, cy:.5, rot:0, skewV:0, skewH:0 };
         const win = computeCropWindow(it.eff, it.AR, cropForScale);
         const baseW = settings.direction === 'vertical' ? it.slotCross : it.slotLong;
         const baseH = settings.direction === 'vertical' ? it.slotLong : it.slotCross;
         const nativeScale = Math.min(win.winW / baseW, win.winH / baseH);
-        if (Number.isFinite(nativeScale) && nativeScale > 0) {
-          referenceNativeScale = Math.max(referenceNativeScale, nativeScale);
-        }
+        if (Number.isFinite(nativeScale) && nativeScale > 0) referenceNativeScale = Math.max(referenceNativeScale, nativeScale);
       });
       finalScale = referenceNativeScale > 0 ? referenceNativeScale : 1;
       target = compositeLong * finalScale;
@@ -2500,6 +2475,15 @@
       target = settings.outputMode === 'custom' ? settings.outputCustom : settings.outputPreset;
       finalScale = target / compositeLong;
     }
+    return { finalScale, target };
+  }
+
+  function resolveCompositeGeometry(items, commonSize){
+    const slotLongSum = items.reduce((s, it) => s + it.slotLong, 0);
+    const n = items.length;
+    let spacing = 0, compositeLong = slotLongSum;
+    const compositeCross = commonSize;
+    let { finalScale, target } = resolveOutputScale(items, compositeLong);
     // v1.7.8 — 간격은 '사진/프레임 크기'가 아니라 최종 결과물의 긴 축에 비례.
     // 목표 긴 축에서 원하는 gap px를 먼저 정한 뒤, 내부 좌표계 spacing으로 역산한다.
     if (settings.spacingMode !== 'none' && n > 1) {
@@ -2518,20 +2502,24 @@
         finalScale = target / compositeLong;
       }
     }
+    return { spacing, finalScale, finalLong: Math.max(1, Math.round(compositeLong * finalScale)), finalCross: Math.max(1, Math.round(compositeCross * finalScale)) };
+  }
 
-    const finalLong = Math.max(1, Math.round(compositeLong * finalScale));
-    const finalCross = Math.max(1, Math.round(compositeCross * finalScale));
+  function prepareCompositeCanvas(finalLong, finalCross){
     if (settings.direction === 'vertical') { canvas.width = finalCross; canvas.height = finalLong; }
     else { canvas.width = finalLong; canvas.height = finalCross; }
-
     emptyPreview.style.display = 'none';
     canvas.hidden = false;
     exportBtn.disabled = false;
-
+    const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    return ctx;
+  }
 
+  function drawCompositeItems(ctx, items, geometry, live){
+    const { spacing, finalScale } = geometry;
     let cursor = 0;
     items.forEach((it, idx) => {
       const cropForRender = settings.fitMode === 'original'
@@ -2551,18 +2539,13 @@
       lastSlots.push({ id: it.p.id, x: dx, y: dy, w: destW, h: destH });
       cursor += it.slotLong + (idx < n - 1 ? spacing : 0);
     });
+  }
 
-    // sharpening (a per-pixel blur+compare pass) and the JPEG/PNG size estimate (a real
-    // encode of the whole canvas) are both real work — worth skipping on every single
-    // touchmove tick during a live drag, since the settle render right after the
-    // gesture ends redoes this one at full quality anyway
+  function updateRenderedPreview(ctx, geometry, live){
     if (!live) {
-      // per-photo now (사진 조정 tab), not a single global setting — each slot looks up
-      // its own photo's crop.sharpen instead of one shared amount for the whole composite
       lastSlots.forEach(slot => {
-        const p = photos.find(ph => ph.id === slot.id);
         const amount = 0; // v1.7.12: 이음은 출력/개별 샤프닝을 하지 않음
-        if (amount > 0) applySharpenRect(ctx, canvas, slot.x, slot.y, slot.w, slot.h, amount, finalLong);
+        if (amount > 0) applySharpenRect(ctx, canvas, slot.x, slot.y, slot.w, slot.h, amount, geometry.finalLong);
       });
       dimsReadout.textContent = canvas.width + ' × ' + canvas.height + ' px';
       updateSizeEstimate();
@@ -2570,6 +2553,27 @@
     }
     if (editingId) positionEditOverlay();
     if (eyeGuideOn) positionEyeGuide();
+  }
+
+  function renderComposite(opts){
+    const live = !!(opts && opts.live);
+    if (photos.length === 0) {
+      canvas.hidden = true;
+      emptyPreview.style.display = '';
+      dimsReadout.textContent = '—';
+      sizeReadout.textContent = '—';
+      exportBtn.disabled = true;
+      lastSlots = [];
+      if (editingId) exitEdit();
+      if (eyeGuideOn) positionEyeGuide();
+      return;
+    }
+    lastSlots = [];
+    const { items, commonSize } = buildRenderItems();
+    const geometry = resolveCompositeGeometry(items, commonSize);
+    const ctx = prepareCompositeCanvas(geometry.finalLong, geometry.finalCross);
+    drawCompositeItems(ctx, items, geometry, live);
+    updateRenderedPreview(ctx, geometry, live);
   }
 
   function updateSizeEstimate(){
