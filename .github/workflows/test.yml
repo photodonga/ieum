@@ -1,0 +1,20 @@
+name: 검사
+
+# index.html을 올릴 때마다 자동으로 문법 검사 + 브라우저 테스트를 돌린다.
+# 결과는 저장소 Actions 탭과 커밋 옆의 ✓ / ✗ 표시로 확인할 수 있다.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
