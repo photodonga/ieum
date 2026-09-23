@@ -3,7 +3,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<meta content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" name="viewport"/>
 <title>이음</title>
 <!-- desktop settings heading -->
 <!-- settings-first desktop layout -->
@@ -1052,6 +1052,11 @@
     .preview-toolbar-head{flex-wrap:wrap; min-height:34px;}
     #previewAdjustDock{flex:1 1 420px;}
   }
+
+  /* 휴대폰에서 화면 전체 두 손가락 확대(와 두 번 탭 확대)를 막는다.
+     스크롤은 그대로 된다. 사진 조정 영역(.edit-overlay 등)은 touch-action:none이라
+     이 앱이 직접 두 손가락 확대를 처리하므로 영향이 없다. */
+  html, body{touch-action:pan-x pan-y;}
 </style>
 <div class="wrap">
 <header class="top">
@@ -3535,6 +3540,13 @@
     }, mime, EXPORT_QUALITY);
   });
 
+
+  // iOS Safari는 touch-action만으로 화면 확대가 완전히 막히지 않는 경우가 있어
+  // 화면 확대 제스처(gesture*) 자체를 막는다. 사진 조정의 두 손가락 확대는
+  // pointer 이벤트로 따로 처리하므로 이 코드와 무관하게 계속 동작한다.
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
+    document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+  });
 
   /* ---------- viewport fit ----------
      Keep the whole workspace visible by giving the preview exactly the remaining

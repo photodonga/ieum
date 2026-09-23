@@ -145,6 +145,24 @@ try {
     check("모바일: 좌우 + 버튼이 보인다", s.sideAdd);
     check("모바일: 헤더 + 버튼은 없다", !s.headerAdd);
     check("모바일: 가로 스크롤이 생기지 않는다", !s.overflowX);
+
+    // 화면 전체 두 손가락 확대는 막고, 사진 조정의 두 손가락 확대는 살아 있어야 한다
+    const zoomLock = await page.evaluate(() => ({
+      touch: getComputedStyle(document.documentElement).touchAction,
+      meta: document.querySelector('meta[name="viewport"]').content,
+    }));
+    check("모바일: 화면 확대 막힘 (touch-action·viewport)", zoomLock.touch === "pan-x pan-y" && zoomLock.meta.includes("maximum-scale=1"), JSON.stringify(zoomLock));
+    await page.locator('li.photo-item [data-act="adjust"]').first().click();
+    await page.waitForTimeout(500);
+    await page.locator("#editOverlay").scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    const ob = await page.locator("#editOverlay").boundingBox();
+    const z0 = Number(await page.inputValue("#zoomRange"));
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Input.synthesizePinchGesture", { x: ob.x + ob.width / 2, y: ob.y + ob.height / 2, scaleFactor: 1.8, relativeSpeed: 400, gestureSourceType: "touch" });
+    await page.waitForTimeout(400);
+    const z1 = Number(await page.inputValue("#zoomRange"));
+    check("모바일: 사진 조정에서는 두 손가락 확대가 된다", z1 > z0, `${z0} → ${z1}`);
     check("모바일: 자바스크립트 오류 없음", errors.length === 0, errors.join(" | "));
     await page.close();
   }
