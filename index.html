@@ -2499,9 +2499,10 @@
       // 큰 사진의 해상도와 전체 결과 크기는 유지한다.
       let referenceNativeScale = 0;
       items.forEach((it) => {
-        const cropForScale = settings.fitMode === 'original'
-          ? { ...it.p.crop, z:1, cx:.5, cy:.5, rot:0, skewV:0, skewH:0 }
-          : it.p.crop;
+        // "최대 크기" is an output-size policy, not a crop-size policy.  A zoomed,
+        // rotated, or perspective-corrected edit must not make the whole composite
+        // smaller; it only means that particular slot may need to be upscaled.
+        const cropForScale = { ...it.p.crop, z:1, cx:.5, cy:.5, rot:0, skewV:0, skewH:0 };
         const win = computeCropWindow(it.eff, it.AR, cropForScale);
         const baseW = settings.direction === 'vertical' ? it.slotCross : it.slotLong;
         const baseH = settings.direction === 'vertical' ? it.slotLong : it.slotCross;
