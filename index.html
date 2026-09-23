@@ -1206,9 +1206,6 @@
 <h2>미리보기</h2>
 <div id="previewAdjustDock" hidden></div>
 <div class="preview-head-actions">
-<button class="icon-btn mobile-add-photo" id="mobileAddPhotoBtn" type="button" title="사진 추가" aria-label="사진 추가">
-<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
-</button>
 <div class="history-group">
 <button class="icon-btn" disabled="" id="undoBtn" title="실행 취소 (Ctrl+Z)">
 <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"></path></svg>
@@ -2583,7 +2580,7 @@
       else { dx = pos; dy = 0; }
       drawSlot(ctx, it.eff.img, win, dx, dy, destW, destH, settings.fitMode === 'original' ? defaultCrop() : it.p.crop, live);
       lastSlots.push({ id: it.p.id, x: dx, y: dy, w: destW, h: destH });
-      cursor += it.slotLong + (idx < n - 1 ? spacing : 0);
+      cursor += it.slotLong + (idx < items.length - 1 ? spacing : 0);
     });
   }
 
