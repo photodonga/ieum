@@ -81,7 +81,7 @@ const browser = await chromium.launch();
 try {
   // ---------- PC ----------
   {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto(PAGE);
@@ -126,6 +126,25 @@ try {
     await page.waitForTimeout(400);
     const vcols = await slotColors(page);
     check("PC: 세로로 잇기도 모든 사진이 그려진다", vcols.every((c, i) => near(c, COLORS[i])), JSON.stringify(vcols));
+
+    // 미리보기는 가볍게(화면 해상도), 저장은 원본 해상도로
+    const res = await page.evaluate(() => ({
+      preview: document.getElementById("canvas").width,
+      dims: document.getElementById("dimsReadout").textContent,
+    }));
+    const outW = Number((res.dims.match(/^(\d+)/) || [0, 0])[1]);
+    check("PC: 미리보기는 화면 해상도로 그린다 (버벅임 방지)", res.preview < outW && res.preview <= 3000, `${res.preview} / ${outW}`);
+    const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#exportBtn")]);
+    const saved = await dl.path();
+    const head = (await import("node:fs")).readFileSync(saved);
+    // JPEG SOF0/SOF2 마커에서 실제 저장 크기를 읽는다
+    let savedW = 0, savedH = 0;
+    for (let i = 2; i < head.length - 9; i++) {
+      if (head[i] === 0xff && (head[i + 1] === 0xc0 || head[i + 1] === 0xc2)) {
+        savedH = head.readUInt16BE(i + 5); savedW = head.readUInt16BE(i + 7); break;
+      }
+    }
+    check("PC: 저장 파일은 원본 해상도", res.dims === `${savedW} × ${savedH} px`, `${res.dims} vs ${savedW}x${savedH}`);
 
     check("PC: 자바스크립트 오류 없음", errors.length === 0, errors.join(" | "));
     await page.close();

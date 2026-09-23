@@ -2458,7 +2458,7 @@
     return ctx;
   }
 
-  function drawCompositeItems(ctx, items, geometry, live){
+  function drawCompositeItems(ctx, items, geometry, live, slotsOut = lastSlots){
     const { spacing, finalScale } = geometry;
     let cursor = 0;
     items.forEach((it, idx) => {
@@ -2476,15 +2476,15 @@
       if (settings.direction === 'vertical') { dx = 0; dy = pos; }
       else { dx = pos; dy = 0; }
       drawSlot(ctx, it.eff.img, win, dx, dy, destW, destH, settings.fitMode === 'original' ? defaultCrop() : it.p.crop, live);
-      lastSlots.push({ id: it.p.id, x: dx, y: dy, w: destW, h: destH });
+      slotsOut.push({ id: it.p.id, x: dx, y: dy, w: destW, h: destH });
       cursor += it.slotLong + (idx < items.length - 1 ? spacing : 0);
     });
   }
 
   function updateRenderedPreview(ctx, geometry, live){
     if (!live) {
-      dimsReadout.textContent = canvas.width + ' × ' + canvas.height + ' px';
-      updateSizeEstimate();
+      dimsReadout.textContent = lastRender.full.w + ' × ' + lastRender.full.h + ' px';
+      scheduleSizeEstimate();
       applyPreviewZoom();
     }
     if (editingId) positionEditOverlay();
@@ -2508,18 +2508,80 @@
     lastSlots = [];
     const { items, commonSize } = buildRenderItems();
     const geometry = resolveCompositeGeometry(items, commonSize);
-    const ctx = prepareCompositeCanvas(geometry.finalLong, geometry.finalCross);
-    drawCompositeItems(ctx, items, geometry, live);
-    updateRenderedPreview(ctx, geometry, live);
+    const full = fullDimsOf(geometry);
+    // 미리보기는 화면에 필요한 해상도로만 그린다. 원본 해상도(수천만 화소)로 매번 그리면
+    // 휴대폰에서 선택·드래그·확대가 버벅인다. 저장할 때만 원본 해상도로 다시 그린다.
+    lastPreviewTargetW = previewTargetWidth();
+    const ps = Math.min(1, lastPreviewTargetW / full.w);
+    const previewGeometry = {
+      ...geometry,
+      finalScale: geometry.finalScale * ps,
+      finalLong: Math.max(1, Math.round(geometry.finalLong * ps)),
+      finalCross: Math.max(1, Math.round(geometry.finalCross * ps)),
+    };
+    lastRender = { full };
+    const ctx = prepareCompositeCanvas(previewGeometry.finalLong, previewGeometry.finalCross);
+    drawCompositeItems(ctx, items, previewGeometry, live);
+    updateRenderedPreview(ctx, previewGeometry, live);
     syncPreviewInsertButtons();
   }
 
+  /* ---------- preview resolution vs. output resolution ---------- */
+  let lastRender = { full: { w: 0, h: 0 } };
+  let lastPreviewTargetW = 0;
+  function fullDimsOf(geometry){
+    return settings.direction === 'vertical'
+      ? { w: geometry.finalCross, h: geometry.finalLong }
+      : { w: geometry.finalLong, h: geometry.finalCross };
+  }
+  // 미리보기 캔버스 가로 픽셀 수: 화면 폭 × 기기 픽셀 배율 (최소 1200px).
+  // 미리보기는 어떤 배율에서도 화면 폭보다 넓게 표시되지 않으므로 이 정도면 선명하다.
+  function previewTargetWidth(){
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    return Math.max(1200, Math.ceil(window.innerWidth * dpr));
+  }
+  // 저장용: 원본 해상도로 새 캔버스에 그린다 (화면의 미리보기 캔버스는 건드리지 않음).
+  function renderFullResolution(){
+    const { items, commonSize } = buildRenderItems();
+    const geometry = resolveCompositeGeometry(items, commonSize);
+    const full = fullDimsOf(geometry);
+    const out = document.createElement('canvas');
+    out.width = full.w; out.height = full.h;
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, out.width, out.height);
+    drawCompositeItems(ctx, items, geometry, false, []);
+    return out;
+  }
+  function formatBytes(bytes){
+    const kb = bytes / 1024;
+    return kb > 1024 ? (kb/1024).toFixed(1) + 'MB' : Math.round(kb) + 'KB';
+  }
+  // 파일 크기는 원본 해상도 전체를 인코딩하지 않고, 가운데 1024px 조각만 원본 해상도로
+  // 그려 인코딩한 뒤 전체 면적으로 환산한다 (그래서 '약'). 저장하면 실제 크기로 바뀐다.
+  let sizeEstimateTimer = null;
+  function scheduleSizeEstimate(){
+    clearTimeout(sizeEstimateTimer);
+    sizeEstimateTimer = setTimeout(updateSizeEstimate, 500);
+  }
   function updateSizeEstimate(){
+    if (!photos.length) return;
+    const { items, commonSize } = buildRenderItems();
+    const geometry = resolveCompositeGeometry(items, commonSize);
+    const full = fullDimsOf(geometry);
+    const tw = Math.min(1024, full.w), th = Math.min(1024, full.h);
+    const tile = document.createElement('canvas');
+    tile.width = tw; tile.height = th;
+    const ctx = tile.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, tw, th);
+    ctx.translate(-Math.round((full.w - tw) / 2), -Math.round((full.h - th) / 2));
+    drawCompositeItems(ctx, items, geometry, false, []);
     const mime = settings.format === 'jpeg' ? 'image/jpeg' : 'image/png';
-    canvas.toBlob((blob) => {
+    tile.toBlob((blob) => {
       if (!blob) { sizeReadout.textContent = '—'; return; }
-      const kb = blob.size / 1024;
-      sizeReadout.textContent = kb > 1024 ? (kb/1024).toFixed(1) + 'MB' : Math.round(kb) + 'KB';
+      const est = blob.size * (full.w * full.h) / (tw * th);
+      sizeReadout.textContent = '약 ' + formatBytes(est);
     }, mime, EXPORT_QUALITY);
   }
 
@@ -3449,7 +3511,7 @@
      environment falls back to the host download bridge or a standard download link. */
   let preparedShare = null; // { blob, filename, key } from a tap whose activation expired
   function currentRenderKey(){
-    return canvas.width + 'x' + canvas.height + '|' + settings.format + '|' +
+    return lastRender.full.w + 'x' + lastRender.full.h + '|' + settings.format + '|' +
       photos.map(p => p.id + ':' + p.rotation + ':' + JSON.stringify(p.crop)).join(',');
   }
   async function finishWithDownloads(blob, filename){
@@ -3509,11 +3571,16 @@
     exportBtn.disabled = true;
     const prevLabel = exportLabel.textContent;
     exportLabel.textContent = '저장 중…';
+    // '저장 중…'이 먼저 화면에 그려지도록 한 프레임 쉬고 원본 해상도로 그린다.
+    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+    const outCanvas = renderFullResolution();
 
-    canvas.toBlob(async (blob) => {
+    outCanvas.toBlob(async (blob) => {
       exportBtn.disabled = false;
       exportLabel.textContent = prevLabel;
+      outCanvas.width = outCanvas.height = 0; // 큰 캔버스 메모리 바로 반납
       if (!blob) return;
+      sizeReadout.textContent = formatBytes(blob.size);
       const stamp = new Date();
       const pad = n => String(n).padStart(2,'0');
       const filename = `photojoin_${stamp.getFullYear()}${pad(stamp.getMonth()+1)}${pad(stamp.getDate())}_${pad(stamp.getHours())}${pad(stamp.getMinutes())}.${ext}`;
@@ -3603,6 +3670,8 @@
   function handleLayoutChange(){
     cancelAnimationFrame(layoutChangeRAF);
     layoutChangeRAF = requestAnimationFrame(() => {
+      // 창이 넓어져 미리보기 해상도가 부족해지면 다시 그린다.
+      if (photos.length && previewTargetWidth() > lastPreviewTargetW) scheduleRender();
       placeAdjustPanel();
       syncPhotoListHeight();
       schedulePreviewFit();
