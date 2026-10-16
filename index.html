@@ -14,6 +14,7 @@
 
   /* ---------- Base ---------- */
   :root{
+    color-scheme:light;
     --bg:#EEF0F3;
     --bg-grid:rgba(15,23,42,.05);
     --panel:rgba(255,255,255,.64);
@@ -35,36 +36,38 @@
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --bg:#131519;
-      --bg-grid:rgba(255,255,255,.05);
-      --panel:rgba(40,42,48,.60);
-      --panel-solid:#1E2024;
-      --panel-border:rgba(255,255,255,.10);
-      --ink:#EDEFF2;
-      --ink-soft:#9BA2AD;
-      --ink-faint:#6C7280;
-      --accent:#5B82E8;
-      --accent-strong:#84A3F2;
-      --accent-wash:rgba(91,130,232,.18);
-      --accent-ink:#0B1530;
+      color-scheme:dark;
+      --bg:#15171B;
+      --bg-grid:rgba(255,255,255,.065);
+      --panel:rgba(35,38,44,.94);
+      --panel-solid:#23262C;
+      --panel-border:rgba(184,193,207,.23);
+      --ink:#F4F5F7;
+      --ink-soft:#B8C0CB;
+      --ink-faint:#A4ADBA;
+      --accent:#E4BC57;
+      --accent-strong:#F0CE78;
+      --accent-wash:rgba(228,188,87,.16);
+      --accent-ink:#17191D;
       --danger:#F0847A;
       --danger-wash:rgba(240,132,122,.14);
       --shadow:0 24px 48px -28px rgba(0,0,0,.6);
     }
   }
   :root[data-theme="dark"]{
-    --bg:#131519;
-    --bg-grid:rgba(255,255,255,.05);
-    --panel:rgba(40,42,48,.60);
-    --panel-solid:#1E2024;
-    --panel-border:rgba(255,255,255,.10);
-    --ink:#EDEFF2;
-    --ink-soft:#9BA2AD;
-    --ink-faint:#6C7280;
-    --accent:#5B82E8;
-    --accent-strong:#84A3F2;
-    --accent-wash:rgba(91,130,232,.18);
-    --accent-ink:#0B1530;
+    color-scheme:dark;
+    --bg:#15171B;
+    --bg-grid:rgba(255,255,255,.065);
+    --panel:rgba(35,38,44,.94);
+    --panel-solid:#23262C;
+    --panel-border:rgba(184,193,207,.23);
+    --ink:#F4F5F7;
+    --ink-soft:#B8C0CB;
+    --ink-faint:#A4ADBA;
+    --accent:#E4BC57;
+    --accent-strong:#F0CE78;
+    --accent-wash:rgba(228,188,87,.16);
+    --accent-ink:#17191D;
     --danger:#F0847A;
     --danger-wash:rgba(240,132,122,.14);
     --shadow:0 24px 48px -28px rgba(0,0,0,.6);
@@ -1057,6 +1060,28 @@
      스크롤은 그대로 된다. 사진 조정 영역(.edit-overlay 등)은 touch-action:none이라
      이 앱이 직접 두 손가락 확대를 처리하므로 영향이 없다. */
   html, body{touch-action:pan-x pan-y;}
+
+  /* Dark theme: native form controls, photo list, selection and focus readability.
+     Visual-only: never apply filters to the canvas or exported pixels. */
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]) input,
+    :root:not([data-theme="light"]) select,
+    :root:not([data-theme="light"]) textarea{color-scheme:dark;}
+  }
+  :root[data-theme="dark"] input,
+  :root[data-theme="dark"] select,
+  :root[data-theme="dark"] textarea{color-scheme:dark;}
+  :is(:root[data-theme="dark"], :root:not([data-theme="light"])) .dropzone{
+    border-color:var(--ink-faint);
+  }
+  :is(:root[data-theme="dark"], :root:not([data-theme="light"])) .num-input::placeholder,
+  :is(:root[data-theme="dark"], :root:not([data-theme="light"])) .text-input::placeholder{
+    color:var(--ink-faint);
+  }
+  button:focus-visible, .pill:focus-visible, input:focus-visible, summary:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
 </style>
 <div class="wrap">
 <header class="top">
@@ -1307,7 +1332,7 @@
 </div>
 </div>
 <footer class="app-footer">
-    Copyright by 송은석. All rights reserved.
+    Copyright by 송은석. All Rights Reserved.
     <div class="contact-line">사용 문의 및 건의: <a href="mailto:silverstone@donga.com">silverstone@donga.com</a></div>
 </footer>
 </div>
