@@ -110,6 +110,28 @@ try {
     check("PC: 고른 순서대로 추가된다", s.names.join() === "p1,p2,p3", s.names.join());
     const cols = await slotColors(page);
     check("PC: 모든 사진이 그려진다 (하얀 칸 없음)", cols.every((c, i) => near(c, COLORS[i])), JSON.stringify(cols));
+
+    // Canvas 픽셀 회귀: 같은 입력을 같은 설정으로 다시 그리면 결과가 정확히 같아야 한다.
+    // 원본(main)과의 교차 버전 비교는 별도의 기준 이미지 검증이 필요하다.
+    const pixelBefore = await page.evaluate(() => {
+      const c = document.getElementById("canvas");
+      const g = c.getContext("2d");
+      const data = g.getImageData(0, 0, c.width, c.height).data;
+      let hash = 2166136261;
+      for (let i = 0; i < data.length; i++) hash = Math.imul(hash ^ data[i], 16777619) >>> 0;
+      return { width: c.width, height: c.height, hash };
+    });
+    await page.waitForTimeout(350);
+    const pixelAfter = await page.evaluate(() => {
+      const c = document.getElementById("canvas");
+      const g = c.getContext("2d");
+      const data = g.getImageData(0, 0, c.width, c.height).data;
+      let hash = 2166136261;
+      for (let i = 0; i < data.length; i++) hash = Math.imul(hash ^ data[i], 16777619) >>> 0;
+      return { width: c.width, height: c.height, hash };
+    });
+    check("PC: 합성 캔버스 픽셀이 안정적으로 유지된다", JSON.stringify(pixelBefore) === JSON.stringify(pixelAfter), JSON.stringify({ pixelBefore, pixelAfter }));
+
     check("PC: 좌우 + 버튼이 보인다", s.sideAdd);
     check("PC: 헤더 + 버튼은 없다", !s.headerAdd);
 
