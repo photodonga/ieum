@@ -66,8 +66,8 @@ function drawPerspectiveMesh(ctx, img, win, skewV, skewH, destW, destH, gridN, c
   for (let j = 0; j < gridN; j++){
     for (let i = 0; i < gridN; i++){
       const v00 = verts[j][i], v10 = verts[j][i+1], v01 = verts[j+1][i], v11 = verts[j+1][i+1];
-      drawWarpedTriangle(ctx, img, [v00[0],v00[1]], [v10[0],v10[1]], [v01[0],v01[1]], [v00[2],v00[3]], [v10[2],v10[3]], [v01[2],v01[3]], solveAffine3, solveAffine3);
-      drawWarpedTriangle(ctx, img, [v10[0],v10[1]], [v11[0],v11[1]], [v01[0],v01[1]], [v10[2],v10[3]], [v11[2],v11[3]], [v01[2],v01[3]], solveAffine3, solveAffine3);
+      drawWarpedTriangle(ctx, img, [v00[0],v00[1]], [v10[0],v10[1]], [v01[0],v01[1]], [v00[2],v00[3]], [v10[2],v10[3]], [v01[2],v01[3]], solveAffine3);
+      drawWarpedTriangle(ctx, img, [v10[0],v10[1]], [v11[0],v11[1]], [v01[0],v01[1]], [v10[2],v10[3]], [v11[2],v11[3]], [v01[2],v01[3]], solveAffine3);
     }
   }
 }
