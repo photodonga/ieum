@@ -5,6 +5,7 @@ import * as transformMath from "./transform-math.js";
 import * as perspectiveRenderer from "./perspective-renderer.js";
 import * as photoState from "./photo-state.js";
 import * as browserDownload from "./browser-download.js";
+import * as canvasEncoder from "./canvas-encoder.js";
 
 (function(){
   "use strict";
@@ -1104,7 +1105,7 @@ import * as browserDownload from "./browser-download.js";
     ctx.translate(-Math.round((full.w - tw) / 2), -Math.round((full.h - th) / 2));
     drawCompositeItems(ctx, items, geometry, false, []);
     const mime = settings.format === 'jpeg' ? 'image/jpeg' : 'image/png';
-    tile.toBlob((blob) => {
+    canvasEncoder.encodeCanvas(tile, (blob) => {
       if (!blob) { sizeReadout.textContent = '—'; return; }
       const est = blob.size * (full.w * full.h) / (tw * th);
       sizeReadout.textContent = '약 ' + formatBytes(est);
@@ -2095,7 +2096,7 @@ import * as browserDownload from "./browser-download.js";
     await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
     const outCanvas = renderFullResolution();
 
-    outCanvas.toBlob(async (blob) => {
+    canvasEncoder.encodeCanvas(outCanvas, async (blob) => {
       exportBtn.disabled = false;
       exportLabel.textContent = prevLabel;
       outCanvas.width = outCanvas.height = 0; // 큰 캔버스 메모리 바로 반납
