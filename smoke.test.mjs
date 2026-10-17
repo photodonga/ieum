@@ -4,9 +4,28 @@
 import { chromium } from "playwright";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { createServer } from "node:http";
+import { readFile } from "node:fs/promises";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const PAGE = "file://" + path.join(here, "index.html");
+// ES modules require an HTTP origin; file:// silently blocks module loading in Chromium.
+const server = createServer(async (req, res) => {
+  try {
+    const pathname = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+    const filePath = path.resolve(here, "." + pathname);
+    if (!filePath.startsWith(here + path.sep) && filePath !== here) {
+      res.writeHead(403); res.end(); return;
+    }
+    const body = await readFile(filePath);
+    const mime = filePath.endsWith(".js") ? "text/javascript" : filePath.endsWith(".css") ? "text/css" : "text/html";
+    res.writeHead(200, { "Content-Type": mime + "; charset=utf-8" });
+    res.end(body);
+  } catch {
+    res.writeHead(404); res.end("Not found");
+  }
+});
+await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+const PAGE = `http://127.0.0.1:${server.address().port}/index.html`;
 
 let failed = 0;
 function check(name, ok, detail = "") {
@@ -187,6 +206,7 @@ try {
   }
 } finally {
   await browser.close();
+  await new Promise(resolve => server.close(resolve));
 }
 
 console.log(failed ? `\n${failed}개 실패` : "\n모두 통과");
