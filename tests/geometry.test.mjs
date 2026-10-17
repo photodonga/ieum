@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { rotMatrix, computeOverscale, solveAffine3 } from "../src/transform-math.js";
 import { computeCropWindow } from "../src/crop-geometry.js";
 import { clonePhotoState } from "../src/photo-state.js";
+import { downloadBlob } from "../src/browser-download.js";
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
@@ -52,4 +53,16 @@ test("photo history snapshot copies crop state without sharing it", () => {
   assert.notEqual(copy[0].crop, source[0].crop);
   copy[0].crop.z = 5;
   assert.equal(source[0].crop.z, 2);
+});
+
+
+test("browser download creates and revokes an object URL", () => {
+  const events = [];
+  const link = { click() { events.push("click"); }, remove() { events.push("remove"); } };
+  const document = { createElement(tag) { assert.equal(tag, "a"); return link; }, body: { appendChild(node) { assert.equal(node, link); events.push("append"); } } };
+  const URL = { createObjectURL(blob) { assert.equal(blob, "test-blob"); return "blob:test"; }, revokeObjectURL(url) { assert.equal(url, "blob:test"); events.push("revoke"); } };
+  downloadBlob("test-blob", "test.jpg", { document, URL, setTimeout(callback, ms) { assert.equal(ms, 4000); callback(); } });
+  assert.equal(link.href, "blob:test");
+  assert.equal(link.download, "test.jpg");
+  assert.deepEqual(events, ["append", "click", "remove", "revoke"]);
 });
