@@ -1,0 +1,1072 @@
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  /* ---------- Base ---------- */
+  :root{
+    color-scheme:light;
+    --bg:#EEF0F3;
+    --bg-grid:rgba(15,23,42,.05);
+    --panel:rgba(255,255,255,.64);
+    --panel-solid:#ffffff;
+    --panel-border:rgba(15,23,42,.09);
+    --ink:#1C2024;
+    --ink-soft:#5B6470;
+    --ink-faint:#9199A6;
+    --accent:#1E3A8C;
+    --accent-strong:#14285F;
+    --accent-wash:rgba(30,58,140,.10);
+    --accent-ink:#FFFFFF;
+    --danger:#C6483A;
+    --danger-wash:rgba(198,72,58,.10);
+    --shadow:0 24px 48px -28px rgba(15,23,42,.35);
+    --radius-lg:22px;
+    --radius-md:14px;
+    --radius-sm:9px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#15171B;
+      --bg-grid:rgba(255,255,255,.065);
+      --panel:rgba(35,38,44,.94);
+      --panel-solid:#23262C;
+      --panel-border:rgba(184,193,207,.23);
+      --ink:#F4F5F7;
+      --ink-soft:#B8C0CB;
+      --ink-faint:#A4ADBA;
+      --accent:#E4BC57;
+      --accent-strong:#F0CE78;
+      --accent-wash:rgba(228,188,87,.16);
+      --accent-ink:#17191D;
+      --danger:#F0847A;
+      --danger-wash:rgba(240,132,122,.14);
+      --shadow:0 24px 48px -28px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#15171B;
+    --bg-grid:rgba(255,255,255,.065);
+    --panel:rgba(35,38,44,.94);
+    --panel-solid:#23262C;
+    --panel-border:rgba(184,193,207,.23);
+    --ink:#F4F5F7;
+    --ink-soft:#B8C0CB;
+    --ink-faint:#A4ADBA;
+    --accent:#E4BC57;
+    --accent-strong:#F0CE78;
+    --accent-wash:rgba(228,188,87,.16);
+    --accent-ink:#17191D;
+    --danger:#F0847A;
+    --danger-wash:rgba(240,132,122,.14);
+    --shadow:0 24px 48px -28px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box;}
+  /* some mobile/in-app browsers (older WebViews, Samsung Internet, etc.) keep a native
+     platform "chrome" around <button> elements — extra baked-in padding/bevel/glow that
+     ignores box-sizing — unless appearance is explicitly turned off. Left alone, that
+     native chrome can make a button visually balloon past the CSS width/height we set,
+     especially once a background color is applied (as the "조정" icon button does when a
+     photo already has a crop adjustment). Reset it app-wide so every custom button renders
+     at exactly the size its CSS specifies, on every browser. */
+  button{font:inherit; margin:0; padding:0; -webkit-appearance:none; appearance:none;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"IBM Plex Sans KR",-apple-system,BlinkMacSystemFont,"Malgun Gothic",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    /* dragging sliders/handles/list items easily catches nearby text as a browser text-selection
+       (shows as a blue highlight, feels like a bug) — turn that off app-wide, then explicitly
+       hand it back to the few places someone might actually want to select/copy text from. */
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  }
+  input, textarea{ -webkit-user-select:text; user-select:text; }
+  .mono{font-family:"IBM Plex Mono",ui-monospace,"SFMono-Regular",monospace; font-variant-numeric:tabular-nums;}
+
+  .app-footer{
+    margin-top:28px; padding:16px 20px 0;
+    text-align:center; font-size:11.5px; color:var(--ink-faint);
+  }
+  .app-footer a{color:inherit; text-decoration:underline; text-underline-offset:2px;}
+  .app-footer a:hover{color:var(--ink-soft);}
+  .app-footer .contact-line{margin-top:4px;}
+
+  .wrap{
+    max-width:1760px;
+    margin:0 auto;
+    padding:36px 20px 72px;
+  }
+  header.top{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:28px;
+    flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand-mark{
+    width:34px;height:34px;border-radius:10px;
+    background:linear-gradient(155deg, var(--accent), var(--accent-strong));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 16px -8px rgba(221,122,36,.55);
+    flex:none;
+  }
+  .brand-mark svg{width:18px;height:18px;stroke:var(--accent-ink);}
+  .brand h1{font-size:21px; font-weight:700; margin:0; letter-spacing:-.01em;}
+  header.top p{margin:0; color:var(--ink-soft); font-size:13.5px;}
+
+  /* narrow/mobile: one continuous top-to-bottom flow (사진 → 설정 → 미리보기), each
+     panel named so the wide-desktop breakpoint below can rearrange them into columns
+     without touching the DOM order. */
+  .grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:22px;
+    align-items:start;
+    grid-template-areas:
+      "photos"
+      "controls"
+      "preview";
+  }
+  #photosCol{grid-area:photos;}
+  #controlsCol{grid-area:controls;}
+  #previewCol{grid-area:preview;}
+  /* the list/settings panels stay a comfortable, centered reading width up to the
+     wide-desktop breakpoint, where the grid itself takes over sizing them */
+  .narrow-col{max-width:680px; width:100%; margin:0 auto;}
+  .panel-narrow{max-width:680px; margin-left:auto; margin-right:auto;}
+
+  .panel{
+    background:var(--panel);
+    -webkit-backdrop-filter:blur(22px) saturate(160%);
+    backdrop-filter:blur(22px) saturate(160%);
+    border:1px solid var(--panel-border);
+    border-radius:var(--radius-lg);
+    padding:18px;
+  }
+  .panel + .panel{margin-top:18px;}
+  .panel-head{
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:8px 0;
+    margin-bottom:14px;
+  }
+  /* Korean text can line-break between any two characters by default (no spaces needed),
+     so once the actions on the right got crowded (history buttons + 눈높이 + 미리보기 크기),
+     the title itself got squeezed down and "미리보기" started splitting into "미리보"/"기"
+     on separate lines. Keep it whole and let the actions wrap to their own row instead. */
+  .panel-head h2{font-size:14px; font-weight:600; margin:0; white-space:nowrap; flex-shrink:0;}
+  .panel-head .count{color:var(--ink-faint); font-size:12.5px;}
+
+  /* icon buttons */
+  .icon-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:30px; height:30px; min-width:30px; min-height:30px; max-width:30px; max-height:30px;
+    border-radius:9px; line-height:1; padding:0;
+    border:1px solid var(--panel-border); background:var(--panel-solid);
+    color:var(--ink-soft); cursor:pointer; flex:none;
+    transition:background .12s ease, color .12s ease, border-color .12s ease, transform .08s ease;
+  }
+  .icon-btn svg{width:15px;height:15px;}
+  .icon-btn:hover{color:var(--ink); border-color:color-mix(in srgb, var(--ink-faint) 50%, transparent);}
+  .icon-btn:active{transform:scale(.93);}
+  .icon-btn:disabled{opacity:.35; cursor:not-allowed; transform:none;}
+  .icon-btn.danger:hover{color:var(--danger); background:var(--danger-wash); border-color:transparent;}
+  .icon-btn.accent{background:var(--accent); color:var(--accent-ink); border-color:transparent;}
+  .icon-btn.accent:hover{background:var(--accent-strong); color:var(--accent-ink);}
+  .icon-btn.on{background:var(--accent-wash); color:var(--accent); border-color:transparent;}
+
+  /* add zone */
+  .dropzone{
+    border:1.5px dashed var(--panel-border);
+    border-radius:var(--radius-md);
+    padding:30px 14px;
+    text-align:center;
+    color:var(--ink-faint);
+    font-size:13px;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease, padding .15s ease;
+  }
+  .dropzone svg{width:24px;height:24px; margin-bottom:9px; stroke:var(--ink-faint);}
+  .dropzone:hover, .dropzone.over{border-color:var(--accent); color:var(--accent); background:var(--accent-wash);}
+  .dropzone:hover svg, .dropzone.over svg{stroke:var(--accent);}
+  .dropzone.compact{
+    padding:10px 14px; display:flex; flex-direction:row; align-items:center; justify-content:center; gap:8px;
+  }
+  .dropzone.compact svg{width:15px;height:15px; margin:0;}
+  ul.photo-list{list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:8px;}
+  li.photo-item{
+    display:flex; align-items:center; gap:8px;
+    background:var(--panel-solid);
+    border:1px solid var(--panel-border);
+    border-radius:var(--radius-sm);
+    padding:7px;
+    position:relative;
+    /* lets the other rows glide into their new slot (FLIP-animated in JS) instead of
+       snapping there instantly whenever a drag reorders the list */
+    transition:transform .18s cubic-bezier(.2,.8,.2,1);
+  }
+  li.photo-item.dragging{
+    /* the row being dragged is pulled out to document.body and floats at these fixed
+       viewport coordinates, updated every pointermove — see the drag-reorder JS below for
+       why it can't just stay position:fixed in place inside .panel (backdrop-filter there
+       would make IT the fixed-position containing block instead of the viewport) */
+    position:fixed;
+    margin:0;
+    z-index:9999;
+    opacity:.9;
+    box-shadow:0 18px 34px -12px rgba(0,0,0,.4);
+    transform:scale(1.04);
+    pointer-events:none;
+    transition:box-shadow .15s ease, opacity .15s ease;
+  }
+  .drag-placeholder{
+    box-sizing:border-box;
+    border:1.5px dashed var(--panel-border);
+    border-radius:var(--radius-sm);
+    background:transparent;
+  }
+  .drag-handle{
+    cursor:grab; color:var(--ink-faint); flex:none; display:flex;
+    width:16px; height:30px; align-items:center; justify-content:center;
+    /* pointer-based reordering (mouse + touch) drives this handle directly, so the
+       browser must never intercept the gesture as a page-scroll/pan before our own
+       pointermove handler sees it */
+    touch-action:none;
+  }
+  .drag-handle:active{cursor:grabbing;}
+  .drag-handle svg{width:12px;height:16px;}
+  .thumb{
+    width:38px; height:38px; border-radius:7px; object-fit:cover;
+    background:var(--bg); flex:none; border:1px solid var(--panel-border);
+  }
+  .thumb-wrap{position:relative; flex:none;}
+  .rot-badge{
+    position:absolute; bottom:-4px; right:-4px;
+    background:var(--ink); color:var(--bg);
+    border-radius:6px; font-size:9px; line-height:1; padding:2px 3px;
+    font-family:"IBM Plex Mono",monospace;
+  }
+  .photo-name{
+    flex:1; min-width:0; font-size:12.5px; color:var(--ink-soft);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .item-actions{display:flex; gap:4px; flex:none;}
+  .stack-btns{display:flex; flex-direction:column; gap:2px; flex:none;}
+  .stack-btns button{
+    width:18px; height:14px; border:none; background:transparent; color:var(--ink-faint);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;
+  }
+  .stack-btns button:hover{color:var(--ink);}
+  .stack-btns button:disabled{opacity:.25; cursor:not-allowed;}
+  .stack-btns svg{width:11px;height:11px;}
+
+  .list-footer{
+    display:flex; align-items:center; justify-content:flex-end;
+    margin-top:14px; padding-top:12px; border-top:1px solid var(--panel-border);
+  }
+  .text-btn{
+    background:none; border:none; color:var(--ink-faint); font-size:12px; cursor:pointer;
+    padding:4px 2px;
+  }
+  .text-btn:hover{color:var(--danger);}
+  /* "누르면 바로 실행" 대신 "한번 더 누르면 실행"으로 확인받는 상태 — window.confirm()은
+     published Artifact가 돌아가는 sandboxed iframe에서 allow-modals가 없어 그냥 무시되고
+     (버튼이 아예 안 눌리는 것처럼 보임), 그래서 네이티브 대화상자 대신 이 방식을 쓴다. */
+  .text-btn.armed{color:var(--danger); font-weight:600;}
+
+  /* window.alert()도 같은 이유로 sandboxed iframe에서 무시되므로, 저장 실패 등을 사용자에게
+     알릴 때 쓰는 자체 토스트 알림 */
+  .app-toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(12px);
+    background:var(--ink); color:var(--bg); font-size:13px; line-height:1.4;
+    padding:10px 16px; border-radius:10px; max-width:min(86vw,420px); text-align:center;
+    box-shadow:0 10px 28px -8px rgba(0,0,0,.4); opacity:0; pointer-events:none;
+    transition:opacity .18s ease, transform .18s ease; z-index:10000;
+  }
+  .app-toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* settings */
+  .field{margin-bottom:16px;}
+  .field:last-child{margin-bottom:0;}
+  .field-label{
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:12.5px; color:var(--ink-soft); margin-bottom:8px; font-weight:500;
+  }
+  .seg{
+    display:flex; background:var(--panel-solid); border:1px solid var(--panel-border);
+    border-radius:11px; padding:3px; gap:2px;
+  }
+  .seg button{
+    flex:1; border:none; background:transparent; color:var(--ink-soft);
+    font-size:12.5px; font-family:inherit; font-weight:500;
+    padding:8px 6px; border-radius:8px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    transition:background .12s ease, color .12s ease;
+  }
+  .seg button svg{width:14px;height:14px;}
+  .seg button.active{background:var(--accent); color:var(--accent-ink);}
+  .seg button:not(.active):hover{color:var(--ink);}
+  /* compact variant for a toggle that sits inline inside a .field-label row rather than
+     taking a full field row of its own (e.g. the 세로형/가로형 ratio-orientation switch) */
+  .seg-sm{padding:2px; border-radius:8px; gap:1px; flex:none;}
+  .seg-sm button{padding:4px 9px; font-size:11px; border-radius:6px;}
+  #controlTabs{margin-bottom:18px;}
+  #controlTabs button{font-size:13.5px; font-weight:600;}
+
+  input[type="range"]{
+    -webkit-appearance:none; width:100%; height:28px; background:transparent; margin:0;
+    /* without this, a touch that starts on the thumb can get claimed by the page's own
+       scroll/pan gesture on some mobile browsers instead of dragging the slider — the
+       screen scrolls out from under your finger instead of the value changing. */
+    touch-action:none;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{
+    height:4px; border-radius:2px; background:var(--panel-border);
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:15px; height:15px; border-radius:50%;
+    background:var(--accent); margin-top:-5.5px; cursor:pointer;
+    box-shadow:0 2px 6px rgba(0,0,0,.25);
+  }
+  input[type="range"]::-moz-range-track{height:4px; border-radius:2px; background:var(--panel-border);}
+  input[type="range"]::-moz-range-thumb{
+    width:15px; height:15px; border-radius:50%; border:none; background:var(--accent); cursor:pointer;
+  }
+
+  .pillrow{display:flex; flex-wrap:wrap; gap:6px;}
+  .pill{
+    border:1px solid var(--panel-border); background:var(--panel-solid); color:var(--ink-soft);
+    font-family:"IBM Plex Mono",monospace; font-size:12px; padding:7px 11px; border-radius:9px;
+    cursor:pointer;
+  }
+  .pill.active{background:var(--accent); color:var(--accent-ink); border-color:transparent;}
+  .pill:not(.active):hover{color:var(--ink);}
+
+  .num-input, .text-input{
+    width:100%; font-family:"IBM Plex Mono",monospace; font-size:12.5px;
+    background:var(--panel-solid); border:1px solid var(--panel-border); color:var(--ink);
+    border-radius:8px; padding:8px 10px; margin-top:8px;
+  }
+  .num-input:focus, .text-input:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  .num-input:disabled, .text-input:disabled{
+    color:var(--ink-soft); -webkit-text-fill-color:var(--ink-soft); opacity:1; cursor:not-allowed;
+  }
+
+  .ratio-custom-row{display:flex; align-items:center; gap:8px; margin-top:8px;}
+  .ratio-custom-row .ratio-num{width:auto; flex:1; margin-top:0; text-align:center;}
+  .ratio-custom-row .ratio-colon{color:var(--ink-faint); font-family:"IBM Plex Mono",monospace; font-size:13px; flex:none;}
+  .ratio-custom-hint{font-size:11px; color:var(--ink-faint); margin-top:7px; line-height:1.4;}
+
+  details.advanced{margin-top:2px;}
+  details.advanced summary{
+    font-size:12px; color:var(--ink-faint); cursor:pointer; list-style:none; user-select:none;
+    display:flex; align-items:center; gap:5px;
+  }
+  details.advanced summary::-webkit-details-marker{display:none;}
+  details.advanced summary svg{width:10px; height:10px; transition:transform .15s ease;}
+  details.advanced[open] summary svg{transform:rotate(90deg);}
+  details.advanced .adv-body{padding-top:12px;}
+  .checkline{display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-soft);}
+  .checkline input{accent-color:var(--accent); width:14px; height:14px;}
+
+  /* preview */
+  .preview-stage{
+    border-radius:var(--radius-md);
+    background-color:var(--bg);
+    background-image:radial-gradient(var(--bg-grid) 1px, transparent 1px);
+    background-size:14px 14px;
+    border:1px solid var(--panel-border);
+    padding:20px;
+    display:flex; align-items:center; justify-content:center;
+    min-height:500px;
+  }
+  /* fill the preview stage's full width first — height just follows the composite's own
+     aspect ratio (a replaced element like canvas keeps its intrinsic ratio automatically
+     when only width is constrained). No max-height here: capping it was quietly fighting
+     the "use the available width" goal, especially in landscape, where there was plenty
+     of width to spare but the vh-based height cap kept the render small regardless. */
+  #canvas{max-width:100%; height:auto; border-radius:4px; box-shadow:var(--shadow); display:block;}
+  .empty-preview{color:var(--ink-faint); font-size:13px; text-align:center; padding:30px 10px;}
+  .empty-preview svg{width:26px;height:26px; margin-bottom:10px; stroke:var(--ink-faint);}
+
+  .readout{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;
+    margin-top:14px; font-size:12px; color:var(--ink-faint);
+  }
+  .readout .dims{color:var(--ink-soft);}
+
+  .export-row{display:flex; gap:10px; margin-top:14px; align-items:center; flex-wrap:wrap;}
+  .btn-primary{
+    flex:1; min-width:180px;
+    background:var(--accent); color:var(--accent-ink); border:none;
+    font-family:inherit; font-weight:600; font-size:14px;
+    padding:13px 18px; border-radius:12px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:background .12s ease, transform .08s ease;
+  }
+  .btn-primary svg{width:16px;height:16px;}
+  .btn-primary:hover{background:var(--accent-strong);}
+  .btn-primary:active{transform:scale(.98);}
+  .btn-primary:disabled{opacity:.4; cursor:not-allowed;}
+
+  .privacy-note{
+    display:flex; align-items:center; gap:6px;
+    font-size:11.5px; color:var(--ink-faint); margin-top:12px;
+  }
+  .privacy-note svg{width:12px;height:12px; flex:none;}
+
+  /* ---------- Edit overlay ---------- */
+  /* Inline crop editing, directly on the live preview. */
+  /* no overflow:hidden here (any more) — the canvas rounds its own corners on its own
+     border-radius below, and clipping would also cut off the corner rotate-zones (see
+     .edit-rotate-zone), which are deliberately centered ON the canvas edge and so need
+     to reach slightly past it to be grabbable at all. */
+  .canvas-wrap{position:relative; display:inline-block; line-height:0; max-width:100%; border-radius:4px;}
+  /* 사진이 미리보기를 가득 채우는 휴대폰에서도 양 끝에 바로 삽입할 수 있는 버튼.
+     화면 가장자리를 누르는 기존 동작과 같은 규칙: 왼쪽=맨 앞, 오른쪽=맨 뒤. */
+  .mobile-side-add{display:none;}
+  @media (max-width:700px){
+    .mobile-side-add{
+      position:absolute; top:50%; z-index:70;
+      display:flex; align-items:center; justify-content:center;
+      width:36px; height:44px; padding:0;
+      border:1px solid rgba(255,255,255,.76); border-radius:12px;
+      background:rgba(24,32,46,.68); color:#fff;
+      box-shadow:0 3px 12px rgba(0,0,0,.22);
+      transform:translateY(-50%); touch-action:manipulation;
+    }
+    .mobile-side-add.left{left:7px;}
+    .mobile-side-add.right{right:7px;}
+    .mobile-side-add:active{transform:translateY(-50%) scale(.94);}
+    .mobile-side-add svg{width:18px;height:18px;}
+  }
+  .frame-drop-overlay{position:absolute;z-index:50;pointer-events:none;box-sizing:border-box;border:3px solid var(--accent);border-radius:4px;background:rgba(255,214,0,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.8);}
+  .empty-slot-drop{
+    position:absolute;z-index:49;pointer-events:none;box-sizing:border-box;
+    border:2px dashed var(--accent);border-radius:5px;
+    background:rgba(255,214,0,.08);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--accent);font-weight:700;line-height:1.2;
+  }
+  .insert-drop-cue{
+    position:absolute;z-index:51;pointer-events:none;box-sizing:border-box;
+    background:var(--accent);border-radius:999px;
+    opacity:0;transform:scale(.7);
+    transition:left .14s ease,top .14s ease,width .14s ease,height .14s ease,
+               opacity .12s ease,transform .14s ease;
+    box-shadow:0 0 0 5px rgba(255,214,0,.14);
+  }
+  .insert-drop-cue.show{opacity:1;transform:scale(1);}
+  .preview-stage.preview-file-drop{outline:3px solid var(--accent);outline-offset:-3px;background:rgba(255,214,0,.08);}
+  .icon-btn.live{background:var(--accent); color:var(--accent-ink); border-color:transparent;}
+  /* the edited photo gets a clean accent border; the REST of the canvas is dimmed
+     by four real sibling rectangles (below), not a huge box-shadow spread — that
+     trick is unreliable across browsers (notably breaks inside an overflow:hidden
+     ancestor on some mobile Safari versions), which showed up as a stray highlight
+     line with no actual dimming instead of a proper spotlight. */
+  .edit-overlay{
+    position:absolute; touch-action:none; cursor:grab; border-radius:2px;
+    box-shadow:0 0 0 2px var(--accent);
+  }
+  .edit-overlay:active{cursor:grabbing;}
+  .edit-scrim{position:absolute; background:rgba(8,9,11,.5); pointer-events:none;}
+  .edit-grid{position:absolute; inset:0; pointer-events:none;}
+  .edit-grid .gl{position:absolute; background:rgba(255,255,255,.6);}
+  .edit-grid .gl.v{top:0; bottom:0; width:1px;}
+  .edit-grid .gl.h{left:0; right:0; height:1px;}
+  .edit-handle{
+    position:absolute; width:16px; height:16px; border-radius:50%;
+    background:transparent; border:0;
+    transform:translate(-50%,-50%); cursor:nwse-resize; touch-action:none;
+    box-shadow:none; pointer-events:auto;
+  }
+  .edit-handle::after{
+    content:""; position:absolute; left:50%; top:50%; width:11px; height:11px;
+    transform:translate(-50%,-50%); border-radius:50%;
+    background:var(--panel-solid); border:2px solid var(--accent);
+    box-shadow:0 2px 5px rgba(0,0,0,.28); pointer-events:none;
+  }
+  .edit-handle[data-corner="nw"]{left:0; top:0;}
+  .edit-handle[data-corner="ne"]{left:100%; top:0; cursor:nesw-resize;}
+  .edit-handle[data-corner="sw"]{left:0; top:100%; cursor:nesw-resize;}
+  .edit-handle[data-corner="se"]{left:100%; top:100%;}
+  /* a bigger, invisible ring centered on the same corner point, sitting UNDER the
+     handle in paint order (comes first in the markup) — the handle keeps doing zoom
+     over its own small circle, and grabbing just outside it (still within this ring)
+     rotates instead, arcing around the photo's center like Figma/파워포인트's rotate
+     handles. No visual change to the corner itself, just a bigger, easier-to-grab
+     "outside" zone. */
+  .edit-rotate-zone{
+    position:absolute; width:44px; height:44px; border-radius:50%;
+    transform:translate(-50%,-50%); cursor:grab; touch-action:none; pointer-events:auto;
+  }
+  .edit-rotate-zone.active{cursor:grabbing;}
+  .edit-rotate-zone[data-corner="nw"]{left:0; top:0;}
+  .edit-rotate-zone[data-corner="ne"]{left:100%; top:0;}
+  .edit-rotate-zone[data-corner="sw"]{left:0; top:100%;}
+  .edit-rotate-zone[data-corner="se"]{left:100%; top:100%;}
+
+  /* touch controls are deliberately separated:
+     1 finger on photo = move, 2 fingers = zoom, corners = straighten/rotate.
+     The old one-finger corner zoom handles are hidden on touch devices so a single
+     finger can never change zoom. */
+  @media (pointer:coarse){
+    .edit-handle{display:none;}
+    .edit-rotate-zone{
+      display:block;
+      width:58px; height:58px;
+      pointer-events:auto;
+      touch-action:none;
+      z-index:9;
+    }
+  }
+
+  .edit-done{
+    position:absolute; top:8px; right:8px; width:28px; height:28px; border-radius:50%;
+    background:var(--accent); color:var(--accent-ink); border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.4);
+  }
+  .edit-done svg{width:14px;height:14px;}
+  .edit-hint{
+    font-size:11.5px; color:var(--ink-faint); text-align:center; margin-top:10px;
+  }
+
+  /* global eye-level guide, spans the whole composite, independent of any single photo.
+     Uses a fixed high-visibility blue (not the theme's own button accent) with a dark
+     halo so it reads clearly against any photo content, light or dark. */
+  .eye-guide{
+    position:absolute; left:0; height:0; z-index:6; pointer-events:none;
+  }
+  .eye-guide::before{
+    content:"";
+    position:absolute; left:0; right:0; top:-1px; height:1.5px;
+    background:repeating-linear-gradient(to right, #2F6FEA 0 9px, transparent 9px 16px);
+    filter:drop-shadow(0 0 1.5px rgba(0,0,0,.85)) drop-shadow(0 0 1.5px rgba(0,0,0,.85));
+  }
+  .eye-guide-handle{
+    position:absolute; left:-7px; top:-8px; width:16px; height:16px; border-radius:50%;
+    background:#2F6FEA; border:2px solid #fff; cursor:ns-resize;
+    pointer-events:auto; touch-action:none;
+    box-shadow:0 0 0 1px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.5);
+  }
+  .eyeguide-group{display:flex; align-items:center; gap:6px;}
+  .eyeguide-label{
+    font-size:12px; font-weight:600; color:var(--ink-soft);
+    white-space:nowrap; user-select:none;
+  }
+  #eyeGuideToggle.on{background:#2F6FEA; color:#fff; border-color:transparent;}
+  #eyeGuideToggle.on:hover{background:#2555C7; color:#fff;}
+
+  .preview-head-actions{display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end;}
+  .history-group{display:flex; align-items:center; gap:4px;}
+  /* redo re-uses the undo arrow's svg mirrored, instead of drawing a second icon */
+  .history-group #redoBtn svg{transform:scaleX(-1);}
+  .history-group .icon-btn:not(:disabled){border-color:var(--accent); color:var(--accent);}
+  .history-group .icon-btn:not(:disabled):hover{background:var(--accent-wash);}
+
+  .preview-body{display:flex; flex-direction:column;}
+  .preview-body .preview-stage{width:100%;}
+
+  /* 설정 / 사진 조정 tabs sharing one panel — like a browser/site tab strip — instead of
+     stacking as separate cards. Switching tabs "pops" the newly-shown content in a bit
+     rather than just snapping into view. */
+  .tab-panel{animation:adjustPop .18s ease;}
+  @keyframes adjustPop{
+    from{ opacity:0; transform:translateY(-6px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .adjust-tab-head{
+    margin-bottom:14px;
+  }
+  .adjust-tab-head .edit-hint{margin-top:0; text-align:left;}
+  .adjust-empty{
+    text-align:center; color:var(--ink-faint); font-size:13px; padding:26px 8px; line-height:1.55;
+  }
+  .adjust-empty svg{width:22px; height:22px; margin-bottom:10px; stroke:var(--ink-faint);}
+  .adjust-empty b{color:var(--ink-soft); font-weight:600;}
+  .adjust-field{margin-bottom:14px;}
+  .adjust-field:last-of-type{margin-bottom:0;}
+  .adjust-field .field-label{margin-bottom:4px; font-size:12px;}
+  .adjust-btns{display:flex; flex-direction:column; gap:8px; margin-top:16px;}
+  .btn-outline{
+    background:var(--panel); border:1px solid var(--panel-border); color:var(--ink-soft);
+    font-family:inherit; font-size:12.5px; font-weight:500; padding:9px 10px; border-radius:9px; cursor:pointer;
+    transition:color .12s ease, border-color .12s ease;
+  }
+  .btn-outline:hover{color:var(--ink); border-color:color-mix(in srgb, var(--ink-faint) 50%, transparent);}
+  /* ---------- Mobile ---------- */
+  @media (max-width:600px){
+    .dropzone{padding:40px 14px;}
+    .dropzone svg{width:30px;height:30px;}
+    .dropzone div{font-size:13.5px;}
+    .dropzone.compact{padding:12px 14px;}
+    .dropzone.compact svg{width:15px;height:15px;}
+  }
+
+  @media (max-width:700px){
+    /* the preview is the whole point on a phone — claw back every bit of the page's
+       outer padding so the actual composited image renders as large as possible
+       instead of shrinking to fit inside generously-sized chrome meant for desktop */
+    .wrap{padding:20px 10px 48px;}
+    .grid{gap:14px;}
+    .panel{padding:12px;}
+    .preview-stage{padding:10px;}
+  }
+
+  /* landscape phones (and any other short-viewport device, folded or not): width is
+     comparatively generous but HEIGHT is the scarce resource here, so claw back
+     vertical chrome — the opposite trade-off from the portrait-phone rule above.
+     (The canvas itself no longer has a height cap to relax here; it already fills
+     the available width at every breakpoint.) */
+  @media (orientation:landscape) and (max-height:600px){
+    .wrap{padding:14px 16px 28px;}
+    header.top{margin-bottom:14px;}
+    .grid{gap:12px;}
+    .panel{padding:12px;}
+    .preview-stage{padding:8px;}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important; animation:none !important;}
+  }
+  [hidden]{display:none !important;}
+
+  /* 새 맞춤 방식 메뉴는 기존 패널 폭을 절대 밀어내지 않는다. */
+  .fit-mode-seg{width:100%;min-width:0;}
+  .fit-mode-seg button{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:10px;padding-right:10px;}
+  #controlsCol .panel,#controlsCol .field,#controlsCol .seg,#controlsCol .pillrow{min-width:0;max-width:100%;box-sizing:border-box;}
+  #controlsCol .pill{max-width:100%;white-space:nowrap;}
+  .fit-mode-hint{margin-top:6px;line-height:1.35;}
+  @media (max-width:430px){
+    .fit-mode-seg button{font-size:12px;padding-left:7px;padding-right:7px;}
+    .fit-mode-hint{font-size:11px;}
+  }
+
+
+  #advancedDetails > .field{margin-top:12px;}
+  #advancedDetails > .field:first-of-type{margin-top:14px;}
+  .advanced-state{
+    margin-left:auto; min-width:0; max-width:58%;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    font-size:11px; font-weight:500; opacity:.68;
+  }
+  #advancedDetails summary{display:flex;align-items:center;gap:6px;min-width:0;}
+  @media(max-width:430px){
+    .advanced-state{max-width:52%;font-size:10.5px;}
+  }
+
+
+
+  /* max-height is set from the ACTUAL first 4 rendered rows by JS.
+     This avoids brittle hard-coded card heights across PC/mobile/font scaling. */
+  #photosCol .photo-list{
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+
+
+  /* 목록에 더 많은 사진이 있다는 시각적 단서 */
+  #photoList{
+    scrollbar-width:thin;
+    scrollbar-color:rgba(91,101,116,.45) transparent;
+  }
+  #photoList::-webkit-scrollbar{width:6px;}
+  #photoList::-webkit-scrollbar-track{background:transparent;}
+  #photoList::-webkit-scrollbar-thumb{
+    background:rgba(91,101,116,.38);
+    border-radius:999px;
+  }
+  #photoList::-webkit-scrollbar-thumb:hover{background:rgba(91,101,116,.58);}
+
+  /* 현재 사진 조정 대상으로 선택된 행 */
+  li.photo-item.selected{
+    background:rgba(38,73,154,.08);
+    border-color:rgba(38,73,154,.42);
+    box-shadow:0 0 0 1px rgba(38,73,154,.08) inset;
+  }
+
+
+  /* mobile-only polish; desktop layout remains unchanged */
+  @media (max-width:700px){
+    #photosCol .photo-item .icon-btn{min-width:38px;min-height:38px;}
+    #photosCol .photo-item .stack-btns button{min-width:30px;min-height:20px;}
+  }
+  #photoList.has-more-below{
+    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 calc(100% - 15px),rgba(0,0,0,.78) calc(100% - 7px),rgba(0,0,0,.42) 100%);
+    mask-image:linear-gradient(to bottom,#000 0%,#000 calc(100% - 15px),rgba(0,0,0,.78) calc(100% - 7px),rgba(0,0,0,.42) 100%);
+  }
+
+
+  /* 고급 설정은 비율과 무관하게 항상 표시 */
+  #settingsTabContent #advancedDetails{display:block;}
+
+
+  /* 기존 '사진을 끌어서...' 안내만 미리보기 아래로 이동 */
+  .preview-hint{
+    margin:8px 2px 2px;
+    text-align:center;
+    line-height:1.45;
+  }
+
+
+  /* 저장 직전 출력 상태를 함께 확인 */
+  .readout{gap:8px;flex-wrap:wrap;}
+  #outputReadout{opacity:.72;}
+  @media(max-width:700px){
+    #outputReadout{font-size:10.5px;}
+  }
+
+
+  /* keyboard shortcuts */
+  .shortcut-note{
+    margin-top:10px;
+    font-size:10.5px;
+    line-height:1.45;
+    color:var(--ink-faint);
+    text-align:center;
+  }
+  @media(max-width:700px){.shortcut-note{display:none;}}
+
+
+
+
+  /* 미리보기 자체를 더 큰 드롭 영역으로 */
+  @media(max-width:700px){
+    .preview-stage{min-height:260px;}
+  }
+
+
+  /* preview owns photo import; left column is ordering only */
+  .empty-preview{
+    cursor:pointer;
+    width:100%;
+    min-height:250px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    user-select:none;
+  }
+  .empty-preview-title{font-size:14px;color:var(--ink-soft);font-weight:600;}
+  .empty-preview-sub{margin-top:6px;font-size:11.5px;color:var(--ink-faint);}
+  .empty-preview:hover .empty-preview-title{color:var(--accent);}
+  #photosCol .panel-head h2{white-space:nowrap;}
+
+
+
+
+  /* viewport Fit to Screen
+     기기명이 아니라 실제 브라우저의 남은 세로 공간에 맞춘다. */
+  @media (min-width:701px){
+    .preview-stage{
+      min-height:var(--preview-fit-height, 500px);
+      height:var(--preview-fit-height, 500px);
+    }
+    .empty-preview{
+      min-height:0;
+      height:100%;
+    }
+  }
+
+
+  /* 미리보기 프레임 밖으로 캔버스/편집 오버레이가 튀어나오지 않도록 고정 */
+  .preview-stage{overflow:hidden;}
+  .canvas-wrap{max-width:100%; max-height:100%;}
+  #canvas{max-width:100%; max-height:100%; object-fit:contain;}
+
+  /* PC 미리보기 높이는 viewport가 결정. 왼쪽 사진/설정 열 높이와 분리 */
+  @media (min-width:1100px), (orientation:landscape) and (min-width:800px){
+    #previewCol{align-self:start;}
+    #previewCol > .panel{height:auto;}
+  }
+
+  /* 회색 미리보기 여백은 양 끝 사진 추가 영역 */
+  .preview-stage{cursor:default;}
+
+  /* 세로 잇기 미리보기: 전체 높이를 억지로 Fit하지 않고 폭 기준으로 표시 + 내부 스크롤 */
+  .preview-stage.vertical-preview{
+    overflow-x:hidden;
+    overflow-y:auto;
+    align-items:flex-start;
+    justify-content:center;
+    overscroll-behavior:contain;
+    scrollbar-gutter:stable;
+  }
+  .preview-stage.vertical-preview .canvas-wrap{max-height:none;}
+  .preview-stage.vertical-preview #canvas{max-height:none;}
+
+
+  /* Desktop toolbar and compact output controls. */
+  @media (min-width:701px){
+    header.top{
+      align-items:center;
+      min-height:46px;
+      margin-bottom:12px;
+      flex-wrap:nowrap;
+    }
+    header.top > p{margin-left:auto; flex:none;}
+    /* 왼쪽은 설정 전용. 조정 탭이 공간을 차지하지 않게 한다. */
+    #adjustTabBtn{display:none;}
+    #controlTabs button[data-tab="settings"]{pointer-events:none;}
+
+    /* 팔레트 아래의 메타/저장/안내를 최대한 얇게 */
+    #previewCol .readout{margin-top:7px; min-height:20px;}
+    #previewCol .export-row{margin-top:6px; justify-content:center;}
+    #previewCol .btn-primary{
+      flex:0 0 auto;
+      min-width:150px;
+      padding:8px 18px;
+      border-radius:9px;
+      font-size:12.5px;
+    }
+    #previewCol .shortcut-note{margin-top:6px; font-size:9.5px; line-height:1.25;}
+    #previewCol .privacy-note{margin-top:5px; font-size:10px;}
+    .app-footer{margin-top:10px; padding-top:4px;}
+  }
+
+
+  /* Keep photo adjustments beside the preview title on wide screens. */
+  @media (min-width:701px){
+    header.top{min-height:0;}
+    .preview-toolbar-head{flex-wrap:nowrap; gap:12px; margin-bottom:10px;}
+    #previewAdjustDock{flex:1 1 auto; min-width:0;}
+    #previewAdjustDock[hidden]{display:none !important;}
+    #previewAdjustDock #adjustTabContent{display:block; animation:none;}
+    #previewAdjustDock #adjustEmptyState{display:none !important;}
+    #previewAdjustDock #adjustFieldsWrap{
+      display:grid; grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) auto auto;
+      align-items:center; gap:6px 9px; min-width:0;
+    }
+    #previewAdjustDock .adjust-field{margin:0; min-width:0;}
+    #previewAdjustDock .adjust-field .field-label{margin:0 0 1px; font-size:10px; line-height:1;}
+    #previewAdjustDock input[type="range"]{height:18px;}
+    #previewAdjustDock .adjust-btns{display:contents; margin:0;}
+    #previewAdjustDock .btn-outline{padding:6px 8px; font-size:11px; white-space:nowrap;}
+    .preview-head-actions{flex:none; gap:8px; flex-wrap:nowrap;}
+    .preview-bottom-bar{display:flex; align-items:center; gap:12px; margin-top:7px;}
+    .preview-bottom-bar .readout{flex:1 1 auto; margin:0; min-height:32px;}
+    .preview-bottom-bar .export-row{flex:0 0 auto; margin:0;}
+    .preview-bottom-bar .btn-primary{
+      flex:0 0 auto; min-width:190px; padding:10px 18px; font-size:13px; border-radius:10px;
+    }
+    #previewCol .shortcut-note{margin-top:4px;}
+    #previewCol .privacy-note{margin-top:4px;}
+  }
+
+
+
+  /* ---------- Wide desktop ---------- */
+  /* Settings stay above the scrollable photo list. */
+  @media (min-width:1100px), (orientation:landscape) and (min-width:800px){
+    .grid{
+      grid-template-columns:minmax(240px, 1fr) minmax(0, 4fr);
+      grid-template-areas:
+        "controls preview"
+        "photos preview";
+      grid-template-rows:auto minmax(0,1fr);
+      align-items:stretch;
+    }
+    .narrow-col{max-width:none; margin:0;}
+    .panel-narrow{max-width:none;}
+    #controlsCol{
+      grid-row:1;
+      min-height:0;
+      overflow:visible;
+      align-self:start;
+    }
+    #photosCol{
+      grid-row:2;
+      min-height:0;
+      overflow:hidden;
+      align-self:stretch;
+    }
+    #previewCol{
+      grid-row:1 / 3;
+      min-height:0;
+      align-self:start;
+    }
+    #photosCol > .panel{
+      height:100%;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+    #photosCol .photo-list{
+      flex:1 1 0;
+      min-height:0;
+      max-height:none !important;
+      overflow-y:auto;
+      overflow-x:hidden;
+      overscroll-behavior:contain;
+      scrollbar-gutter:stable;
+      padding-right:3px;
+    }
+    #controlsCol #controlTabs{
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      background:transparent;
+      border:0;
+      border-radius:0;
+      padding:0;
+      margin:0 0 14px;
+      gap:0;
+    }
+    #controlsCol #settingsTabBtn{
+      flex:0 0 auto;
+      background:transparent;
+      color:var(--ink);
+      border:0;
+      border-radius:0;
+      padding:0;
+      font-size:14px;
+      line-height:1.2;
+      font-weight:600;
+      cursor:default;
+      pointer-events:none;
+    }
+    #controlsCol #adjustTabBtn{display:none;}
+  }
+
+  /* 하단 정보 정렬만 정리.
+     출력정보/단축키/개인정보/저작권의 시각적 축을 하나로 맞춘다. */
+  .preview-bottom-bar .readout{
+    justify-content:center;
+    gap:0;
+    text-align:center;
+  }
+  .preview-bottom-bar .readout > span{
+    display:inline-flex;
+    align-items:center;
+    white-space:nowrap;
+  }
+  .preview-bottom-bar .readout > span + span::before{
+    content:"·";
+    margin:0 9px;
+    color:var(--ink-faint);
+    opacity:.65;
+  }
+  #previewCol .shortcut-note{
+    text-align:center;
+  }
+  #previewCol .privacy-note{
+    justify-content:center;
+    text-align:center;
+  }
+  .app-footer{
+    margin-top:14px;
+    padding:12px 20px 0;
+    border-top:1px solid var(--panel-border);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px 14px;
+    flex-wrap:wrap;
+  }
+  .app-footer .contact-line{
+    margin-top:0;
+  }
+  .app-footer .contact-line::before{
+    content:"·";
+    margin-right:14px;
+    color:var(--ink-faint);
+    opacity:.65;
+  }
+
+  @media(max-width:700px){
+    .preview-bottom-bar .readout > span + span::before{margin:0 6px;}
+    #previewCol .privacy-note{
+      justify-content:flex-start;
+      text-align:left;
+    }
+    .app-footer{
+      display:block;
+      border-top:0;
+      margin-top:10px;
+      padding-top:4px;
+      line-height:1.5;
+    }
+    .app-footer .contact-line{margin-top:3px;}
+    .app-footer .contact-line::before{content:none;}
+  }
+
+
+  /* 출력 모드/포맷만 미리보기 하단 정중앙에 고정 */
+  .preview-bottom-bar{
+    position:relative;
+  }
+  .preview-bottom-bar .readout{
+    position:relative;
+    width:100%;
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    align-items:center;
+  }
+  .preview-bottom-bar .readout > span{
+    min-width:0;
+  }
+  /* 첫 번째 상태값(예: — / 픽셀 정보)은 왼쪽 */
+  .preview-bottom-bar .readout > span:first-child{
+    justify-self:start;
+  }
+  /* 출력 모드와 포맷은 가운데 묶음 */
+  .preview-bottom-bar .readout > span:nth-child(2){
+    justify-self:center;
+  }
+  .preview-bottom-bar .readout > span:nth-child(3){
+    justify-self:center;
+  }
+  .preview-bottom-bar .readout > span + span::before{
+    content:none;
+  }
+
+  @media(max-width:700px){
+    .preview-bottom-bar .readout{
+      grid-template-columns:1fr auto 1fr;
+    }
+  }
+
+
+  /* 사진을 선택(조정 모드)할 때 미리보기 크기가 바뀌며 흔들리지 않도록 고정
+     1) 안내 문구는 숨길 때도 자리를 차지해 미리보기 높이가 그대로 유지된다.
+     2) 헤더 높이를 조정 도크가 떠도 같은 높이로 고정한다.
+     3) 미리보기 열이 도크 내용 폭만큼 넓어져 가로 스크롤이 생기던 문제를 막는다. */
+  #previewCol{min-width:0;}
+  #editHint.preview-hint[hidden]{display:block !important; visibility:hidden;}
+  @media (min-width:701px){
+    .preview-toolbar-head{flex-wrap:wrap; min-height:34px;}
+    #previewAdjustDock{flex:1 1 420px;}
+  }
+
+  /* 휴대폰에서 화면 전체 두 손가락 확대(와 두 번 탭 확대)를 막는다.
+     스크롤은 그대로 된다. 사진 조정 영역(.edit-overlay 등)은 touch-action:none이라
+     이 앱이 직접 두 손가락 확대를 처리하므로 영향이 없다. */
+  html, body{touch-action:pan-x pan-y;}
+
+  /* Dark theme: native form controls, photo list, selection and focus readability.
+     Visual-only: never apply filters to the canvas or exported pixels. */
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]) input,
+    :root:not([data-theme="light"]) select,
+    :root:not([data-theme="light"]) textarea{color-scheme:dark;}
+  }
+  :root[data-theme="dark"] input,
+  :root[data-theme="dark"] select,
+  :root[data-theme="dark"] textarea{color-scheme:dark;}
+  :is(:root[data-theme="dark"], :root:not([data-theme="light"])) .dropzone{
+    border-color:var(--ink-faint);
+  }
+  :is(:root[data-theme="dark"], :root:not([data-theme="light"])) .num-input::placeholder,
+  :is(:root[data-theme="dark"], :root:not([data-theme="light"])) .text-input::placeholder{
+    color:var(--ink-faint);
+  }
+  button:focus-visible, .pill:focus-visible, input:focus-visible, summary:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
