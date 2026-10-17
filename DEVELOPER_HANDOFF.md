@@ -11,8 +11,8 @@
 - 브라우저 내 처리; 출력물에는 EXIF/IPTC 정보가 포함되지 않음
 
 ## 실행 및 개발팀 검토 브랜치
-- 기존 공개 URL: https://photodonga.github.io/ieum/ (배포 기준 `main`)
-- CMS 이관용 브랜치: `refactor/cms-handoff-20261017` (**공개판과 분리**, 미배포)
+- 공개 URL: https://photodonga.github.io/ieum/ (리팩터링 버전을 `main`에 병합한 정식판)
+- 리팩터링 작업 이력 보관 브랜치: `refactor/cms-handoff-20261017` (현재 정식판과 분리된 개발 이력)
 - 진입점: `index.html`; 스타일: `styles/app.css`; 앱 제어: `src/app.js`
 - 이미지 계산: `src/composite-geometry.js`, `src/crop-geometry.js`, `src/transform-math.js`
 - 원근 보정: `src/perspective-renderer.js`; 사진 이력 상태: `src/photo-state.js`
@@ -20,7 +20,7 @@
 - 테스트: `npm ci` 후 `npx playwright install chromium`, 이어서 `npm test`
 - 테스트 구성: ESLint → Node 단위 테스트 → Chromium Playwright 스모크/다운로드 검증
 - ES 모듈을 사용하므로 `file://`로 열지 말고 HTTP 정적 서버를 사용해야 합니다.
-- CI 워크플로: `.github/workflows/test.yml`; 원본 `main`을 `.baseline`에 체크아웃해 픽셀 비교를 수행합니다.
+- CI 워크플로: `.github/workflows/test.yml`; 리팩터링 개발 당시에는 기존 `main`을 `.baseline`에 체크아웃해 픽셀 비교했습니다. **병합 이후 `main` 기준의 `.baseline`은 더 이상 리팩터링 이전 버전이 아니므로, 이후 회귀 비교는 고정된 이전 커밋/태그를 기준으로 변경해야 합니다.**
 - 상세 의존성 및 리팩터링 범위: `docs/REFACTORING_MAP.md`
 
 ## 현재 모듈화의 경계
@@ -54,7 +54,8 @@ type ComposeResult = {
 
 ## 최종 자동 검증 결과 (2026-10-17)
 - **최종 검증: 성공.** 커밋 `f6f9667bcda8931dd8b17320fa9ce6fc1bdd0ba0`, GitHub Actions [실행 39011479037](https://github.com/photodonga/ieum/actions/runs/39011479037) 및 [실행 39011477159](https://github.com/photodonga/ieum/actions/runs/39011477159) 모두 성공. 이 결과는 자동화된 검증에 한정되며 실사용 전체 환경이나 CMS 호환을 보증하지 않습니다.
-- **전달 범위:** 독립 실행 가능한 정적 웹앱 및 소스, 테스트, 인계 문서. CMS API 연결, 배포·병합, 실제 송고 연동은 미수행.
+- **전달 범위:** 공개 `main`에 병합된 독립 실행 정적 웹앱 및 소스, 테스트, 인계 문서. CMS API 연결과 실제 송고 연동은 미수행.
+- **정식판 병합 후 CI 성공:** `aa8d9cf1ba0aad494c30b89de7fdce25f3c9ef0d` — [테스트](https://github.com/photodonga/ieum/actions/runs/39011784039), [추가 워크플로](https://github.com/photodonga/ieum/actions/runs/39011783764).
 
 ## 확인된 테스트 범위 (2026-10-17)
 - Chromium PC·모바일 스모크 테스트: 사진 추가 순서, 미리보기, 선택, 삭제·실행 취소, 편집, 다운로드, 오류 감지.
@@ -65,11 +66,28 @@ type ComposeResult = {
 - **미검증:** Safari/Edge 실기기, 다수 대형 원본, 장시간 작업 메모리, ICC 색 프로파일, EXIF/IPTC, CMS 통합 및 보안.
 
 ## 이관 전 주의사항
-- 단일 파일 구조로 인해 수정 영향이 넓음. 모듈 분리는 별도 브랜치에서 점진적으로 수행
+- 일부 모듈은 분리됐지만 `src/app.js`에 주요 UI·상태·렌더링 흐름이 집중돼 있으므로 변경 시 회귀 테스트를 유지
 - 삭제/교체 사진이 undo 이력을 위해 메모리에 남을 수 있음. 장시간 작업 메모리 검증 필요
 - 캔버스 할당/인코딩 실패의 예외 처리를 보강할 필요가 있음
 - 출력물 EXIF/IPTC 제거는 보도사진 송고 정책과 충돌할 수 있으므로 CMS 팀과 명시적으로 합의
 - 원본 프로그램과 CMS 통합판의 이미지 픽셀/크기 비교 회귀 테스트 권장
+
+## 코드 저작권·외부 라이선스 1차 점검 (2026-10-17)
+
+**판정: 확인한 저장소 코드에서 명백한 무단 복제나 라이선스 위반 정황은 발견되지 않았으나, 저작권·라이선스 적합성을 최종 보증하는 감사는 아닙니다.** 외부 프로젝트와의 코드 유사도 전수 대조, npm 전체 전이 의존성 감사, SVG 아이콘 원출처 확인, 법률 검토는 수행하지 않았습니다.
+
+| 점검 대상 | 확인된 내용 | 개발팀 후속 조치 |
+| --- | --- | --- |
+| 앱 런타임 JS | `src/app.js`는 저장소 내부 7개 모듈을 import하며, `package.json`에 별도 런타임 의존성이 선언돼 있지 않음 | 외부 코드 복사·차용 여부를 커밋 이력과 개발 자료로 추가 확인 |
+| 개발·테스트 의존성 | `eslint`, `eslint-plugin-html`, `globals`, `playwright`가 `devDependencies`에 선언됨 | 정확한 설치 버전과 전이 의존성의 라이선스·고지 의무를 lockfile/SBOM으로 확인. 테스트 도구는 배포물과 구분 |
+| 웹 폰트 | `styles/app.css`가 Google Fonts의 IBM Plex Sans KR·IBM Plex Mono를 불러옴 | 폰트의 공식 라이선스와 웹 제공 방식, 사내 외부 CDN 허용 정책 확인. 필요한 고지 여부 검토 |
+| SVG 아이콘 | `index.html`과 `src/app.js`에 인라인 SVG path가 존재함 | 원출처(직접 제작·AI 생성·아이콘 라이브러리 차용)를 확인하고 외부 세트 차용 시 라이선스/저작권 고지 적용 |
+| 이미지 리소스 | Git 추적 파일 목록에 별도 사진·이미지 에셋 파일이 없음 | 시연·홍보용 사진을 추가할 경우 사진별 사용권을 별도로 확인 |
+| 저장소 배포 정책 | 저장소에 별도 `LICENSE` 파일이 없고 UI에 `Copyright by 송은석. All Rights Reserved.`가 표시됨 | 제3자 사용·복제·수정·재배포 허용 범위를 소유권/사내 정책과 함께 결정. 외부 구성요소의 라이선스는 별도로 준수 |
+
+**주의:** AI가 생성한 코드라는 이유만으로 제3자 저작권 침해 위험이 자동 소멸하는 것은 아닙니다. 저작권 문구는 외부 라이브러리·아이콘의 라이선스 고지 의무를 대신하지 않습니다. 공개 저장소와 `package.json`의 `private: true`도 법적 사용허가를 뜻하지 않습니다.
+
+**권장 마무리:** ① SVG 아이콘 출처 확인 ② npm 직접·전이 의존성 라이선스 목록 생성 ③ 폰트 라이선스/외부 CDN 정책 확인 ④ 필요 고지 파일(예: `THIRD_PARTY_NOTICES.md`) 작성 ⑤ 외부 코드 유사도 검토 후 배포 승인.
 
 ## 인수인계 체크리스트
 - [ ] CMS 연동 담당자 및 기술 스택 확인
@@ -79,5 +97,8 @@ type ComposeResult = {
 - [ ] Safari/Edge 및 사내 표준 PC 환경 검증
 - [x] 지정된 테스트 샘플의 합성 픽셀·JPEG/PNG 출력 기본 검증 (CI)
 - [ ] 실제 취재 사진과 CMS 송고 규격으로 출력 샘플 검수
+- [ ] SVG 아이콘·웹 폰트 원출처 및 라이선스 확인
+- [ ] npm 전이 의존성 라이선스 확인 및 필요한 제3자 고지 정리
+- [ ] 외부 코드 차용·유사도 및 공개 배포 정책 최종 확인
 
 Copyright by 송은석. All Rights Reserved.
