@@ -255,6 +255,18 @@ try {
       const expectedCustom = await verticalPixels(baselineVertical);
       const actualCustom = await verticalPixels(refactorVertical);
       check("PC: 사용자 지정 2300px·넓은 간격 픽셀이 원본과 일치한다", JSON.stringify(expectedCustom) === JSON.stringify(actualCustom), JSON.stringify({ expectedCustom, actualCustom }));
+      // Frame-ratio and fit-mode changes are a separate rendering path.
+      const setFitOptions = async p => {
+        await p.locator('#ratioPills .pill[data-ratio="4:5"]').evaluate(button => button.click());
+        await p.locator('#ratioOrientSeg button[data-val="landscape"]').evaluate(button => button.click());
+        await p.locator('#fitModeSeg button[data-val="original"]').evaluate(button => button.click());
+        await p.waitForTimeout(550);
+      };
+      await setFitOptions(baselineVertical);
+      await setFitOptions(refactorVertical);
+      const expectedFit = await verticalPixels(baselineVertical);
+      const actualFit = await verticalPixels(refactorVertical);
+      check("PC: 4:5 가로형·원본 비율 맞춤 픽셀이 원본과 일치한다", JSON.stringify(expectedFit) === JSON.stringify(actualFit), JSON.stringify({ expectedFit, actualFit }));
       await baselineVertical.close();
       await refactorVertical.close();
     }
