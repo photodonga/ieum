@@ -3,6 +3,7 @@ import * as compositeGeometry from "./composite-geometry.js";
 import * as cropGeometry from "./crop-geometry.js";
 import * as transformMath from "./transform-math.js";
 import * as perspectiveRenderer from "./perspective-renderer.js";
+import * as photoState from "./photo-state.js";
 
 (function(){
   "use strict";
@@ -152,7 +153,7 @@ import * as perspectiveRenderer from "./perspective-renderer.js";
   let historyIndex = -1;
 
   function snapshotPhotos(){
-    return photos.map(p => ({ id: p.id, rotation: p.rotation, crop: p.crop ? { ...p.crop } : null }));
+    return photoState.clonePhotoState(photos);
   }
   function updateHistoryButtons(){
     undoBtn.disabled = historyIndex <= 0;
@@ -167,7 +168,7 @@ import * as perspectiveRenderer from "./perspective-renderer.js";
     updateHistoryButtons();
   }
   function restoreSnapshot(snap){
-    photos = snap.map(p => ({ id: p.id, rotation: p.rotation, crop: p.crop ? { ...p.crop } : null }));
+    photos = photoState.clonePhotoState(snap);
     if (editingId && !photos.find(p => p.id === editingId)) {
       exitEdit();
     } else if (editingId) {
