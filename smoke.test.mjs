@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // ES modules require an HTTP origin; file:// silently blocks module loading in Chromium.
@@ -113,6 +114,24 @@ try {
 
     // Canvas 픽셀 회귀: 같은 입력을 같은 설정으로 다시 그리면 결과가 정확히 같아야 한다.
     // 원본(main)과의 교차 버전 비교는 별도의 기준 이미지 검증이 필요하다.
+    if (existsSync(path.join(here, ".baseline", "index.html"))) {
+      const baseline = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      const baselineErrors = [];
+      baseline.on("pageerror", e => baselineErrors.push(e.message));
+      await baseline.goto(PAGE.replace("/index.html", "/.baseline/index.html"));
+      await addPhotos(baseline);
+      const pixels = async p => p.evaluate(() => {
+        const c = document.getElementById("canvas");
+        const data = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+        let hash = 2166136261;
+        for (let i = 0; i < data.length; i++) hash = Math.imul(hash ^ data[i], 16777619) >>> 0;
+        return { w: c.width, h: c.height, hash };
+      });
+      const original = await pixels(baseline);
+      const refactored = await pixels(page);
+      check("PC: 원본(main)과 리팩터링 합성 픽셀이 일치한다", JSON.stringify(original) === JSON.stringify(refactored), JSON.stringify({ original, refactored, baselineErrors }));
+      await baseline.close();
+    }
     const pixelBefore = await page.evaluate(() => {
       const c = document.getElementById("canvas");
       const g = c.getContext("2d");
