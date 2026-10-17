@@ -1,5 +1,4 @@
 // Image transform mathematics extracted from the original Ieum implementation.
-const MAX_KEYSTONE = 0.5;
 function rotMatrix(rotDeg, clamp){
   const rad = clamp(rotDeg, -45, 45) * Math.PI / 180;
   const cos = Math.cos(rad), sin = Math.sin(rad);
