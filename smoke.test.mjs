@@ -228,6 +228,18 @@ try {
       const expectedVertical = await verticalPixels(baselineVertical);
       const actualVertical = await verticalPixels(refactorVertical);
       check("PC: 세로 합성 픽셀이 원본(main)과 일치한다", JSON.stringify(expectedVertical) === JSON.stringify(actualVertical), JSON.stringify({ expectedVertical, actualVertical }));
+
+      // Same input and explicit output/spacing settings must preserve preview pixels.
+      const setOutputOptions = async p => {
+        await p.locator('#outputPills .pill[data-preset="1600"]').evaluate(button => button.click());
+        await p.locator('#spacingPills .pill[data-spacing="none"]').evaluate(button => button.click());
+        await p.waitForTimeout(500);
+      };
+      await setOutputOptions(baselineVertical);
+      await setOutputOptions(refactorVertical);
+      const expectedPreset = await verticalPixels(baselineVertical);
+      const actualPreset = await verticalPixels(refactorVertical);
+      check("PC: 출력 1600px·간격 없음 설정 픽셀이 원본과 일치한다", JSON.stringify(expectedPreset) === JSON.stringify(actualPreset), JSON.stringify({ expectedPreset, actualPreset }));
       await baselineVertical.close();
       await refactorVertical.close();
     }
