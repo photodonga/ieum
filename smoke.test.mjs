@@ -205,6 +205,27 @@ try {
     const vcols = await slotColors(page);
     check("PC: 세로로 잇기도 모든 사진이 그려진다", vcols.every((c, i) => near(c, COLORS[i])), JSON.stringify(vcols));
 
+    // Compare vertical stitching against the untouched public main implementation.
+    if (existsSync(path.join(here, ".baseline", "index.html"))) {
+      const baselineVertical = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await baselineVertical.goto(PAGE.replace("/index.html", "/.baseline/index.html"));
+      await addPhotos(baselineVertical);
+      await baselineVertical.click("#dirVertical");
+      await baselineVertical.waitForTimeout(450);
+      const verticalPixels = async p => p.evaluate(() => {
+        const c = document.getElementById("canvas");
+        const data = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+        let hash = 2166136261;
+        for (const byte of data) hash = Math.imul(hash ^ byte, 16777619) >>> 0;
+        return { w: c.width, h: c.height, hash };
+      });
+      const expectedVertical = await verticalPixels(baselineVertical);
+      const actualVertical = await verticalPixels(page);
+      check("PC: 세로 합성 픽셀이 원본(main)과 일치한다", JSON.stringify(expectedVertical) === JSON.stringify(actualVertical), JSON.stringify({ expectedVertical, actualVertical }));
+      await baselineVertical.close();
+    }
+
+
     // 미리보기는 가볍게(화면 해상도), 저장은 원본 해상도로
     const res = await page.evaluate(() => ({
       preview: document.getElementById("canvas").width,
