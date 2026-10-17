@@ -210,13 +210,14 @@ try {
       const baselineVertical = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       await baselineVertical.goto(PAGE.replace("/index.html", "/.baseline/index.html"));
       await addPhotos(baselineVertical);
-      // Match the refactor page's preceding remove/undo sequence exactly.
-      await baselineVertical.locator('li.photo-item [data-act="remove"]').first().click();
-      await baselineVertical.waitForTimeout(300);
-      await baselineVertical.click("#undoBtn");
-      await baselineVertical.waitForTimeout(400);
+      // Isolate the vertical comparison from prior crop/edit/selection interactions.
+      const refactorVertical = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await refactorVertical.goto(PAGE);
+      await addPhotos(refactorVertical);
       await baselineVertical.click("#dirVertical");
+      await refactorVertical.click("#dirVertical");
       await baselineVertical.waitForTimeout(450);
+      await refactorVertical.waitForTimeout(450);
       const verticalPixels = async p => p.evaluate(() => {
         const c = document.getElementById("canvas");
         const data = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
@@ -225,9 +226,10 @@ try {
         return { w: c.width, h: c.height, hash };
       });
       const expectedVertical = await verticalPixels(baselineVertical);
-      const actualVertical = await verticalPixels(page);
+      const actualVertical = await verticalPixels(refactorVertical);
       check("PC: 세로 합성 픽셀이 원본(main)과 일치한다", JSON.stringify(expectedVertical) === JSON.stringify(actualVertical), JSON.stringify({ expectedVertical, actualVertical }));
       await baselineVertical.close();
+      await refactorVertical.close();
     }
 
 
