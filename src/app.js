@@ -4,6 +4,7 @@ import * as cropGeometry from "./crop-geometry.js";
 import * as transformMath from "./transform-math.js";
 import * as perspectiveRenderer from "./perspective-renderer.js";
 import * as photoState from "./photo-state.js";
+import * as browserDownload from "./browser-download.js";
 
 (function(){
   "use strict";
@@ -2054,13 +2055,7 @@ import * as photoState from "./photo-state.js";
     }
     // Regular browser fallback when no host download bridge is available.
     try {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      browserDownload.downloadBlob(blob, filename, { document, URL, setTimeout });
     } catch (err) {
       showToast('이 화면에서는 저장 기능을 사용할 수 없어요. 다른 환경에서 다시 시도해 주세요.');
     }
