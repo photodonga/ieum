@@ -130,6 +130,24 @@ try {
       const original = await pixels(baseline);
       const refactored = await pixels(page);
       check("PC: 원본(main)과 리팩터링 합성 픽셀이 일치한다", JSON.stringify(original) === JSON.stringify(refactored), JSON.stringify({ original, refactored, baselineErrors }));
+
+      // 원근 보정 경로를 실제로 실행해 픽셀 단위로 교차 검증한다.
+      const applyTransform = async p => {
+        await p.locator('li.photo-item [data-act="adjust"]').first().click();
+        for (const [id, value] of [["#rotRange", "12"], ["#skewVRange", "22"], ["#skewHRange", "-17"]]) {
+          await p.locator(id).evaluate((el, v) => {
+            el.value = v;
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+            el.dispatchEvent(new Event("change", { bubbles: true }));
+          }, value);
+        }
+        await p.waitForTimeout(650);
+      };
+      await applyTransform(baseline);
+      await applyTransform(page);
+      const originalWarp = await pixels(baseline);
+      const refactoredWarp = await pixels(page);
+      check("PC: 회전·수직·수평 원근 보정 픽셀이 원본과 일치한다", JSON.stringify(originalWarp) === JSON.stringify(refactoredWarp), JSON.stringify({ originalWarp, refactoredWarp }));
       await baseline.close();
     }
     const pixelBefore = await page.evaluate(() => {
