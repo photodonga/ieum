@@ -4,9 +4,29 @@
 import { chromium } from "playwright";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { createServer } from "node:http";
+import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const PAGE = "file://" + path.join(here, "index.html");
+// ES modules require an HTTP origin; file:// silently blocks module loading in Chromium.
+const server = createServer(async (req, res) => {
+  try {
+    const pathname = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+    const filePath = path.resolve(here, "." + pathname);
+    if (!filePath.startsWith(here + path.sep) && filePath !== here) {
+      res.writeHead(403); res.end(); return;
+    }
+    const body = await readFile(filePath);
+    const mime = filePath.endsWith(".js") ? "text/javascript" : filePath.endsWith(".css") ? "text/css" : "text/html";
+    res.writeHead(200, { "Content-Type": mime + "; charset=utf-8" });
+    res.end(body);
+  } catch {
+    res.writeHead(404); res.end("Not found");
+  }
+});
+await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+const PAGE = `http://127.0.0.1:${server.address().port}/index.html`;
 
 let failed = 0;
 function check(name, ok, detail = "") {
@@ -91,6 +111,64 @@ try {
     check("PC: 고른 순서대로 추가된다", s.names.join() === "p1,p2,p3", s.names.join());
     const cols = await slotColors(page);
     check("PC: 모든 사진이 그려진다 (하얀 칸 없음)", cols.every((c, i) => near(c, COLORS[i])), JSON.stringify(cols));
+
+    // Canvas 픽셀 회귀: 같은 입력을 같은 설정으로 다시 그리면 결과가 정확히 같아야 한다.
+    // 원본(main)과의 교차 버전 비교는 별도의 기준 이미지 검증이 필요하다.
+    if (existsSync(path.join(here, ".baseline", "index.html"))) {
+      const baseline = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      const baselineErrors = [];
+      baseline.on("pageerror", e => baselineErrors.push(e.message));
+      await baseline.goto(PAGE.replace("/index.html", "/.baseline/index.html"));
+      await addPhotos(baseline);
+      const pixels = async p => p.evaluate(() => {
+        const c = document.getElementById("canvas");
+        const data = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+        let hash = 2166136261;
+        for (let i = 0; i < data.length; i++) hash = Math.imul(hash ^ data[i], 16777619) >>> 0;
+        return { w: c.width, h: c.height, hash };
+      });
+      const original = await pixels(baseline);
+      const refactored = await pixels(page);
+      check("PC: 원본(main)과 리팩터링 합성 픽셀이 일치한다", JSON.stringify(original) === JSON.stringify(refactored), JSON.stringify({ original, refactored, baselineErrors }));
+
+      // 원근 보정 경로를 실제로 실행해 픽셀 단위로 교차 검증한다.
+      const applyTransform = async p => {
+        await p.locator('li.photo-item [data-act="adjust"]').first().click();
+        for (const [id, value] of [["#rotRange", "12"], ["#skewVRange", "22"], ["#skewHRange", "-17"]]) {
+          await p.locator(id).evaluate((el, v) => {
+            el.value = v;
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+            el.dispatchEvent(new Event("change", { bubbles: true }));
+          }, value);
+        }
+        await p.waitForTimeout(650);
+      };
+      await applyTransform(baseline);
+      await applyTransform(page);
+      const originalWarp = await pixels(baseline);
+      const refactoredWarp = await pixels(page);
+      check("PC: 회전·수직·수평 원근 보정 픽셀이 원본과 일치한다", JSON.stringify(originalWarp) === JSON.stringify(refactoredWarp), JSON.stringify({ originalWarp, refactoredWarp }));
+      await baseline.close();
+    }
+    const pixelBefore = await page.evaluate(() => {
+      const c = document.getElementById("canvas");
+      const g = c.getContext("2d");
+      const data = g.getImageData(0, 0, c.width, c.height).data;
+      let hash = 2166136261;
+      for (let i = 0; i < data.length; i++) hash = Math.imul(hash ^ data[i], 16777619) >>> 0;
+      return { width: c.width, height: c.height, hash };
+    });
+    await page.waitForTimeout(350);
+    const pixelAfter = await page.evaluate(() => {
+      const c = document.getElementById("canvas");
+      const g = c.getContext("2d");
+      const data = g.getImageData(0, 0, c.width, c.height).data;
+      let hash = 2166136261;
+      for (let i = 0; i < data.length; i++) hash = Math.imul(hash ^ data[i], 16777619) >>> 0;
+      return { width: c.width, height: c.height, hash };
+    });
+    check("PC: 합성 캔버스 픽셀이 안정적으로 유지된다", JSON.stringify(pixelBefore) === JSON.stringify(pixelAfter), JSON.stringify({ pixelBefore, pixelAfter }));
+
     check("PC: 좌우 + 버튼이 보인다", s.sideAdd);
     check("PC: 헤더 + 버튼은 없다", !s.headerAdd);
 
@@ -127,6 +205,91 @@ try {
     const vcols = await slotColors(page);
     check("PC: 세로로 잇기도 모든 사진이 그려진다", vcols.every((c, i) => near(c, COLORS[i])), JSON.stringify(vcols));
 
+    // Compare vertical stitching against the untouched public main implementation.
+    if (existsSync(path.join(here, ".baseline", "index.html"))) {
+      const baselineVertical = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await baselineVertical.goto(PAGE.replace("/index.html", "/.baseline/index.html"));
+      await addPhotos(baselineVertical);
+      // Isolate the vertical comparison from prior crop/edit/selection interactions.
+      const refactorVertical = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await refactorVertical.goto(PAGE);
+      await addPhotos(refactorVertical);
+      await baselineVertical.click("#dirVertical");
+      await refactorVertical.click("#dirVertical");
+      await baselineVertical.waitForTimeout(450);
+      await refactorVertical.waitForTimeout(450);
+      const verticalPixels = async p => p.evaluate(() => {
+        const c = document.getElementById("canvas");
+        const data = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+        let hash = 2166136261;
+        for (const byte of data) hash = Math.imul(hash ^ byte, 16777619) >>> 0;
+        return { w: c.width, h: c.height, hash };
+      });
+      const expectedVertical = await verticalPixels(baselineVertical);
+      const actualVertical = await verticalPixels(refactorVertical);
+      check("PC: 세로 합성 픽셀이 원본(main)과 일치한다", JSON.stringify(expectedVertical) === JSON.stringify(actualVertical), JSON.stringify({ expectedVertical, actualVertical }));
+
+      // Same input and explicit output/spacing settings must preserve preview pixels.
+      const setOutputOptions = async p => {
+        await p.locator('#outputPills .pill[data-preset="1600"]').evaluate(button => button.click());
+        await p.locator('#spacingPills .pill[data-spacing="none"]').evaluate(button => button.click());
+        await p.waitForTimeout(500);
+      };
+      await setOutputOptions(baselineVertical);
+      await setOutputOptions(refactorVertical);
+      const expectedPreset = await verticalPixels(baselineVertical);
+      const actualPreset = await verticalPixels(refactorVertical);
+      check("PC: 출력 1600px·간격 없음 설정 픽셀이 원본과 일치한다", JSON.stringify(expectedPreset) === JSON.stringify(actualPreset), JSON.stringify({ expectedPreset, actualPreset }));
+      // Exercise custom output and wide spacing, not just the default/preset path.
+      const setCustomOptions = async p => {
+        await p.locator('#outputPills .pill[data-preset="custom"]').evaluate(button => button.click());
+        await p.locator('#outputCustomInput').evaluate(input => {
+          input.value = "2300";
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+        await p.locator('#spacingPills .pill[data-spacing="wide"]').evaluate(button => button.click());
+        await p.waitForTimeout(500);
+      };
+      await setCustomOptions(baselineVertical);
+      await setCustomOptions(refactorVertical);
+      const expectedCustom = await verticalPixels(baselineVertical);
+      const actualCustom = await verticalPixels(refactorVertical);
+      check("PC: 사용자 지정 2300px·넓은 간격 픽셀이 원본과 일치한다", JSON.stringify(expectedCustom) === JSON.stringify(actualCustom), JSON.stringify({ expectedCustom, actualCustom }));
+      // Frame-ratio and fit-mode changes are a separate rendering path.
+      const setFitOptions = async p => {
+        await p.locator('#ratioPills .pill[data-ratio="4:5"]').evaluate(button => button.click());
+        await p.locator('#ratioOrientSeg button[data-val="landscape"]').evaluate(button => button.click());
+        await p.locator('#fitModeSeg button[data-val="original"]').evaluate(button => button.click());
+        await p.waitForTimeout(550);
+      };
+      await setFitOptions(baselineVertical);
+      await setFitOptions(refactorVertical);
+      const expectedFit = await verticalPixels(baselineVertical);
+      const actualFit = await verticalPixels(refactorVertical);
+      check("PC: 4:5 가로형·원본 비율 맞춤 픽셀이 원본과 일치한다", JSON.stringify(expectedFit) === JSON.stringify(actualFit), JSON.stringify({ expectedFit, actualFit }));
+      // Check the unconstrained ratio path after switching from a fixed ratio.
+      const setFreeRatio = async p => {
+        await p.locator('#ratioPills .pill[data-ratio="free"]').evaluate(button => button.click());
+        await p.waitForTimeout(550);
+      };
+      await setFreeRatio(baselineVertical);
+      await setFreeRatio(refactorVertical);
+      const expectedFree = await verticalPixels(baselineVertical);
+      const actualFree = await verticalPixels(refactorVertical);
+      check("PC: 자유 비율 전환 후 픽셀이 원본과 일치한다", JSON.stringify(expectedFree) === JSON.stringify(actualFree), JSON.stringify({ expectedFree, actualFree }));
+      // Prevent a false positive where both versions ignore a setting.
+      check("PC: 1600px 설정이 실제 합성 결과를 바꾼다", JSON.stringify(actualPreset) !== JSON.stringify(actualVertical), JSON.stringify({ actualVertical, actualPreset }));
+      check("PC: 사용자 지정 크기·간격 설정이 실제 합성 결과를 바꾼다", JSON.stringify(actualCustom) !== JSON.stringify(actualPreset), JSON.stringify({ actualPreset, actualCustom }));
+      check("PC: 비율·맞춤 변경이 실제 합성 결과를 바꾼다", JSON.stringify(actualFit) !== JSON.stringify(actualCustom), JSON.stringify({ actualCustom, actualFit }));
+      // Free ratio may produce identical pixels if the photos already fit.
+      // Check the selected option rather than requiring a visual change.
+      const freeSelected = await Promise.all([baselineVertical, refactorVertical].map(p => p.locator('#ratioPills .pill[data-ratio="free"]').evaluate(button => button.classList.contains("active"))));
+      check("PC: 자유 비율 옵션이 양쪽 모두에서 활성화된다", freeSelected.every(Boolean), JSON.stringify({ freeSelected, actualFit, actualFree }));
+      await baselineVertical.close();
+      await refactorVertical.close();
+    }
+
+
     // 미리보기는 가볍게(화면 해상도), 저장은 원본 해상도로
     const res = await page.evaluate(() => ({
       preview: document.getElementById("canvas").width,
@@ -145,6 +308,24 @@ try {
       }
     }
     check("PC: 저장 파일은 원본 해상도", res.dims === `${savedW} × ${savedH} px`, `${res.dims} vs ${savedW}x${savedH}`);
+
+    check("PC: JPEG 저장 파일 시그니처와 확장자 정상", head[0] === 0xff && head[1] === 0xd8 && head[head.length - 2] === 0xff && head[head.length - 1] === 0xd9 && dl.suggestedFilename().endsWith(".jpg"));
+    check("PC: JPEG 저장 파일이 비어 있지 않다", head.length > 1024, String(head.length));
+
+    // 같은 이미지에 PNG 저장을 선택해 파일 시그니처와 실제 픽셀 치수를 검사한다.
+    // The settings panel may be collapsed after entering edit mode; dispatch the
+    // existing click handler directly rather than changing UI visibility.
+    await page.locator('#formatSeg button[data-val="png"]').evaluate(button => button.click());
+    await page.waitForTimeout(350);
+    const pngDims = await page.locator("#dimsReadout").textContent();
+    const [pngDownload] = await Promise.all([page.waitForEvent("download"), page.click("#exportBtn")]);
+    const pngBytes = await readFile(await pngDownload.path());
+    const pngMagic = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+    check("PC: PNG 저장 파일 시그니처와 확장자 정상", pngBytes.subarray(0, 8).equals(pngMagic) && pngDownload.suggestedFilename().endsWith(".png"));
+    const pngWidth = pngBytes.readUInt32BE(16), pngHeight = pngBytes.readUInt32BE(20);
+    check("PC: PNG 저장 파일도 원본 해상도", pngDims === `${pngWidth} × ${pngHeight} px`, `${pngDims} vs ${pngWidth}x${pngHeight}`);
+    check("PC: PNG 저장 파일이 비어 있지 않다", pngBytes.length > 1024, String(pngBytes.length));
+
 
     check("PC: 자바스크립트 오류 없음", errors.length === 0, errors.join(" | "));
     await page.close();
@@ -187,6 +368,7 @@ try {
   }
 } finally {
   await browser.close();
+  await new Promise(resolve => server.close(resolve));
 }
 
 console.log(failed ? `\n${failed}개 실패` : "\n모두 통과");

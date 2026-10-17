@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "eslint index.html",
-    "test": "eslint index.html && node smoke.test.mjs"
+    "lint": "eslint index.html 'src/**/*.js'",
+    "test": "npm run lint && node --test tests/*.test.mjs && node smoke.test.mjs"
   },
   "devDependencies": {
     "eslint": "^9.39.0",
