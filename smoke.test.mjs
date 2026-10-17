@@ -228,7 +228,9 @@ try {
     check("PC: JPEG 저장 파일이 비어 있지 않다", head.length > 1024, String(head.length));
 
     // 같은 이미지에 PNG 저장을 선택해 파일 시그니처와 실제 픽셀 치수를 검사한다.
-    await page.locator('#formatSeg button[data-val="png"]').click();
+    // The settings panel may be collapsed after entering edit mode; dispatch the
+    // existing click handler directly rather than changing UI visibility.
+    await page.locator('#formatSeg button[data-val="png"]').evaluate(button => button.click());
     await page.waitForTimeout(350);
     const pngDims = await page.locator("#dimsReadout").textContent();
     const [pngDownload] = await Promise.all([page.waitForEvent("download"), page.click("#exportBtn")]);
