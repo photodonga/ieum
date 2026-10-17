@@ -5,20 +5,29 @@
 공개 `main`과 분리되어 있습니다. 이 문서는 개발팀이 변경 범위를 검토할 수 있도록 현재 의존성을 기록한 것입니다.
 
 ## 완료한 비동작 변경
-1. 기존 인라인 CSS를 `styles/app.css`로 추출. CSS 선언은 원본과 동일.
-2. 기존 인라인 JavaScript를 `src/app.js`로 추출. JS 내용은 원본과 동일.
-3. `index.html`은 두 파일을 상대 경로로 불러옴.
+1. 인라인 CSS를 `styles/app.css`로, JavaScript를 `src/app.js`로 분리했습니다.
+2. 브라우저 ES 모듈을 사용하도록 `index.html`의 스크립트 로딩을 변경했습니다. 정적 HTTP 서버가 필요합니다.
+3. 합성 배치·출력 크기 계산: `src/composite-geometry.js`.
+4. 사진 크롭 윈도우 계산: `src/crop-geometry.js`.
+5. 회전 행렬·오버스케일·아핀 행렬 계산: `src/transform-math.js`.
+6. 원근 보정 메시 그리기: `src/perspective-renderer.js`.
+7. `src/app.js`는 UI 이벤트, 공유 상태, 렌더링 흐름을 계속 담당합니다. **완전한 엔진/UI 분리는 아직 아닙니다.**
 
-현재는 **파일 분리 단계**이며, UI와 엔진을 독립적인 ES 모듈로 완전히 분리한 상태가 아닙니다.
+## 자동 검증 현황
+- GitHub Actions에서 ESLint와 Chromium Playwright 스모크 테스트 실행.
+- CI에서 공개 `main`을 `.baseline`에 별도로 체크아웃하고, 같은 테스트 이미지를 업로드해 캔버스 크기와 픽셀 해시를 비교.
+- 기본 합성 및 사진 1장에 회전 12°, 수직 +22, 수평 −17을 함께 적용한 합성 비교까지 통과(2026-10-17, 워크플로 실행 39007765135).
+- **주의:** 원본 비교는 현재 고정된 샘플·설정에 한정됩니다. 출력 파일 포맷, 메타데이터, 대용량 메모리 한계, Safari/Edge/실기기 등은 아직 별도 검증이 필요합니다.
+- 로컬에서 `npm test`만 실행하면 `.baseline/index.html`이 없을 경우 원본 비교는 건너뜁니다. CI는 원본 체크아웃을 수행합니다.
 
 ## 현재 주요 함수와 책임
 | 영역 | 주요 함수 (src/app.js) | 주의 |
 |---|---|---|
 | 사진 디코딩/썸네일 | `decodeImageFile`, `makeThumb` | ImageBitmap/Image 폴백 |
 | 사진 목록/이력 | `addFiles`, `snapshotPhotos`, `pushHistory`, `restoreSnapshot` | store 및 photos 상태 공유 |
-| 이미지 회전/크롭 | `getEffectiveImage`, `computeCropWindow` | 이미지 캐시와 편집 상태 공유 |
-| 원근/변형 렌더링 | `solveAffine3`, `drawPerspectiveMesh`, `drawSlot` | 캔버스 좌표·설정 결합 |
-| 합성 배치 | `buildRenderItems`, `resolveOutputScale`, `resolveCompositeGeometry` | settings, photos, store 의존 |
+| 이미지 회전/크롭 | `getEffectiveImage` (`app.js`), `computeCropWindow` (`crop-geometry.js`) | 이미지 캐시와 편집 상태 공유 |
+| 원근/변형 렌더링 | `solveAffine3` (`transform-math.js`), `drawPerspectiveMesh` (`perspective-renderer.js`), `drawSlot` (`app.js`) | 캔버스 좌표·설정 결합 |
+| 합성 배치 | `buildRenderItems` (`app.js`), `resolveOutputScale`, `resolveCompositeGeometry` (`composite-geometry.js`) | settings, photos, store 의존 |
 | 미리보기 | `renderComposite`, `prepareCompositeCanvas` | DOM, 렌더링 상태 의존 |
 | 원본 출력 | `renderFullResolution`, `drawCompositeItems` | 합성 배치/렌더 함수 재사용 |
 | 파일 저장 | `finishWithDownloads`, exportBtn 클릭 핸들러 | 다운로드/공유 플랫폼 의존 |
