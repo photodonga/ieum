@@ -10,23 +10,21 @@
 - JPG/PNG 저장, PC·모바일 인터페이스, 시스템 다크모드 대응
 - 브라우저 내 처리; 출력물에는 EXIF/IPTC 정보가 포함되지 않음
 
-## 실행
-- 현재 공개 URL: https://photodonga.github.io/ieum/
-- 핵심 구현: `index.html` (HTML/CSS/JavaScript 단일 파일)
-- 테스트: `npm test` (정적 검사 및 Playwright 기반 스모크 테스트)
-- 자동화: `.github/workflows/test.yml`
-- 별도 CMS 연결 없이 브라우저에서 실행 가능
+## 실행 및 개발팀 검토 브랜치
+- 기존 공개 URL: https://photodonga.github.io/ieum/ (배포 기준 `main`)
+- CMS 이관용 브랜치: `refactor/cms-handoff-20261017` (**공개판과 분리**, 미배포)
+- 진입점: `index.html`; 스타일: `styles/app.css`; 앱 제어: `src/app.js`
+- 이미지 계산: `src/composite-geometry.js`, `src/crop-geometry.js`, `src/transform-math.js`
+- 원근 보정: `src/perspective-renderer.js`; 사진 이력 상태: `src/photo-state.js`
+- 출력 어댑터: `src/canvas-encoder.js`, `src/browser-download.js`
+- 테스트: `npm ci` 후 `npx playwright install chromium`, 이어서 `npm test`
+- 테스트 구성: ESLint → Node 단위 테스트 → Chromium Playwright 스모크/다운로드 검증
+- ES 모듈을 사용하므로 `file://`로 열지 말고 HTTP 정적 서버를 사용해야 합니다.
+- CI 워크플로: `.github/workflows/test.yml`; 원본 `main`을 `.baseline`에 체크아웃해 픽셀 비교를 수행합니다.
+- 상세 의존성 및 리팩터링 범위: `docs/REFACTORING_MAP.md`
 
-## 현재 코드의 주요 위치 (2026-10-17 기준)
-- `index.html` 약 3,764줄
-- 스타일/테마: 상단 `<style>`; 다크모드 `prefers-color-scheme` 및 `data-theme`
-- 사진 파일 디코딩: `decodeImageFile` (약 1624줄)
-- 사진 추가/상태 이력: `addFiles` (약 1646줄), `pushHistory` (약 1494줄)
-- 합성 기하/배치: `resolveCompositeGeometry` (약 2446줄)
-- 합성 렌더링: `renderComposite` (약 2519줄)
-- 원본 출력: `renderFullResolution` (약 2569줄)
-- 저장: `finishWithDownloads` 및 `exportBtn` 이벤트 (약 3542~3633줄)
-줄 번호는 변경될 수 있으므로 함수명으로 검색하세요.
+## 현재 모듈화의 경계
+**모듈화가 완료됐다는 의미는 아닙니다.** UI, 이미지 파일 저장소, 캔버스 합성 흐름, 사진 편집 상태의 상당 부분은 여전히 `src/app.js`에서 함께 관리합니다. 분리된 모듈은 기존 계산 및 플랫폼 호출의 일부입니다. CMS API 호출, 권한 검사, 메타데이터 보존, 송고 처리는 구현되지 않았습니다.
 
 ## CMS 통합 검토
 권장 순서:
@@ -55,10 +53,11 @@ type ComposeResult = {
 ```
 
 ## 확인된 테스트 범위
-GitHub Actions 실행 https://github.com/photodonga/ieum/actions/runs/38923794138 (성공)
-- PC/모바일 Chromium에서 사진 순서, 합성, UI 기본 동작, 자바스크립트 오류
-- PC 원본 해상도 출력 및 모바일 핀치 확대
-- Safari/Edge 실기기, 대용량·장시간 작업, 실제 CMS 통합은 별도 검증 필요
+- 기본 PC·모바일 Chromium 기능, 사진 순서·삭제·실행 취소, 합성, 오류 감지.
+- 기존 `main`과 리팩터링 브랜치 간 기본 합성 및 회전·수직·수평 원근 보정 결과의 픽셀 해시 비교: [CI 성공](https://github.com/photodonga/ieum/actions/runs/39007765135).
+- 크롭·변환·사진 이력·브라우저 다운로드·캔버스 인코딩 단위 테스트: [CI 성공](https://github.com/photodonga/ieum/actions/runs/39009244014).
+- JPEG·PNG **실제 저장 파일** 시그니처·픽셀 크기·파일 데이터 확인: 추가됨. 최신 실행 상태는 [CI 실행](https://github.com/photodonga/ieum/actions/runs/39009332084)에서 확인해야 하며, 통과 전까지 완료로 간주하지 않습니다.
+- 미검증: Safari/Edge 실기기, 다수 대형 원본 이미지, 메모리 사용량, 색 프로파일, EXIF/IPTC, 사내 CMS 연동 및 보안.
 
 ## 이관 전 주의사항
 - 단일 파일 구조로 인해 수정 영향이 넓음. 모듈 분리는 별도 브랜치에서 점진적으로 수행
