@@ -52,12 +52,13 @@ type ComposeResult = {
 };
 ```
 
-## 확인된 테스트 범위
-- 기본 PC·모바일 Chromium 기능, 사진 순서·삭제·실행 취소, 합성, 오류 감지.
-- 기존 `main`과 리팩터링 브랜치 간 기본 합성 및 회전·수직·수평 원근 보정 결과의 픽셀 해시 비교: [CI 성공](https://github.com/photodonga/ieum/actions/runs/39007765135).
-- 크롭·변환·사진 이력·브라우저 다운로드·캔버스 인코딩 단위 테스트: [CI 성공](https://github.com/photodonga/ieum/actions/runs/39009244014).
-- JPEG·PNG **실제 저장 파일** 시그니처·픽셀 크기·파일 데이터 확인: 추가됨. 최신 실행 상태는 [CI 실행](https://github.com/photodonga/ieum/actions/runs/39009332084)에서 확인해야 하며, 통과 전까지 완료로 간주하지 않습니다.
-- 미검증: Safari/Edge 실기기, 다수 대형 원본 이미지, 메모리 사용량, 색 프로파일, EXIF/IPTC, 사내 CMS 연동 및 보안.
+## 확인된 테스트 범위 (2026-10-17)
+- Chromium PC·모바일 스모크 테스트: 사진 추가 순서, 미리보기, 선택, 삭제·실행 취소, 편집, 다운로드, 오류 감지.
+- 원본 `main`과 비교하는 캔버스 크기·전체 픽셀 해시 검증: 가로 기본 합성, 회전·수직/수평 원근 보정, 세로 합성, 세로 합성에서 출력 1600px·간격 없음 설정. **[최신 CI 통과](https://github.com/photodonga/ieum/actions/runs/39010798553)**.
+- JPEG·PNG **실제 다운로드 파일** 시그니처, 확장자, 이미지 치수, 비어 있지 않은 데이터 확인: **[CI 통과](https://github.com/photodonga/ieum/actions/runs/39009746642)**.
+- Node 단위 테스트 10개: 크롭, 회전, 아핀 변환, 사진 이력 복제, Blob URL 수명, Canvas 인코딩 인수 전달. **[CI 통과](https://github.com/photodonga/ieum/actions/runs/39010798553)**.
+- 테스트는 제한된 합성 샘플을 대상으로 하며 출력 파일 전체의 바이너리 동일성이나 메타데이터 보존을 보장하지 않습니다.
+- **미검증:** Safari/Edge 실기기, 다수 대형 원본, 장시간 작업 메모리, ICC 색 프로파일, EXIF/IPTC, CMS 통합 및 보안.
 
 ## 이관 전 주의사항
 - 단일 파일 구조로 인해 수정 영향이 넓음. 모듈 분리는 별도 브랜치에서 점진적으로 수행
@@ -72,6 +73,7 @@ type ComposeResult = {
 - [ ] 메타데이터 유지/삭제 정책 결정
 - [ ] 최대 파일 수·해상도·메모리 예산 결정
 - [ ] Safari/Edge 및 사내 표준 PC 환경 검증
-- [ ] 합성 결과 샘플과 기대 출력 검증
+- [x] 지정된 테스트 샘플의 합성 픽셀·JPEG/PNG 출력 기본 검증 (CI)
+- [ ] 실제 취재 사진과 CMS 송고 규격으로 출력 샘플 검수
 
 Copyright by 송은석. All Rights Reserved.
