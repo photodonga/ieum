@@ -277,6 +277,11 @@ try {
       const expectedFree = await verticalPixels(baselineVertical);
       const actualFree = await verticalPixels(refactorVertical);
       check("PC: 자유 비율 전환 후 픽셀이 원본과 일치한다", JSON.stringify(expectedFree) === JSON.stringify(actualFree), JSON.stringify({ expectedFree, actualFree }));
+      // Prevent a false positive where both versions ignore a setting.
+      check("PC: 1600px 설정이 실제 합성 결과를 바꾼다", JSON.stringify(actualPreset) !== JSON.stringify(actualVertical), JSON.stringify({ actualVertical, actualPreset }));
+      check("PC: 사용자 지정 크기·간격 설정이 실제 합성 결과를 바꾼다", JSON.stringify(actualCustom) !== JSON.stringify(actualPreset), JSON.stringify({ actualPreset, actualCustom }));
+      check("PC: 비율·맞춤 변경이 실제 합성 결과를 바꾼다", JSON.stringify(actualFit) !== JSON.stringify(actualCustom), JSON.stringify({ actualCustom, actualFit }));
+      check("PC: 자유 비율 전환이 실제 합성 결과를 바꾼다", JSON.stringify(actualFree) !== JSON.stringify(actualFit), JSON.stringify({ actualFit, actualFree }));
       await baselineVertical.close();
       await refactorVertical.close();
     }
