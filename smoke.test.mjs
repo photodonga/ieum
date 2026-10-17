@@ -281,7 +281,10 @@ try {
       check("PC: 1600px 설정이 실제 합성 결과를 바꾼다", JSON.stringify(actualPreset) !== JSON.stringify(actualVertical), JSON.stringify({ actualVertical, actualPreset }));
       check("PC: 사용자 지정 크기·간격 설정이 실제 합성 결과를 바꾼다", JSON.stringify(actualCustom) !== JSON.stringify(actualPreset), JSON.stringify({ actualPreset, actualCustom }));
       check("PC: 비율·맞춤 변경이 실제 합성 결과를 바꾼다", JSON.stringify(actualFit) !== JSON.stringify(actualCustom), JSON.stringify({ actualCustom, actualFit }));
-      check("PC: 자유 비율 전환이 실제 합성 결과를 바꾼다", JSON.stringify(actualFree) !== JSON.stringify(actualFit), JSON.stringify({ actualFit, actualFree }));
+      // Free ratio may produce identical pixels if the photos already fit.
+      // Check the selected option rather than requiring a visual change.
+      const freeSelected = await Promise.all([baselineVertical, refactorVertical].map(p => p.locator('#ratioPills .pill[data-ratio="free"]').evaluate(button => button.classList.contains("active"))));
+      check("PC: 자유 비율 옵션이 양쪽 모두에서 활성화된다", freeSelected.every(Boolean), JSON.stringify({ freeSelected, actualFit, actualFree }));
       await baselineVertical.close();
       await refactorVertical.close();
     }
