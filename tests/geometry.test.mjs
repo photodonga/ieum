@@ -4,6 +4,7 @@ import { rotMatrix, computeOverscale, solveAffine3 } from "../src/transform-math
 import { computeCropWindow } from "../src/crop-geometry.js";
 import { clonePhotoState } from "../src/photo-state.js";
 import { downloadBlob } from "../src/browser-download.js";
+import { encodeCanvas } from "../src/canvas-encoder.js";
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
@@ -65,4 +66,15 @@ test("browser download creates and revokes an object URL", () => {
   assert.equal(link.href, "blob:test");
   assert.equal(link.download, "test.jpg");
   assert.deepEqual(events, ["append", "click", "remove", "revoke"]);
+});
+
+
+test("canvas encoder forwards MIME, quality and callback unchanged", () => {
+  const callback = () => {};
+  const canvas = { toBlob(cb, mime, quality) {
+    assert.equal(cb, callback);
+    assert.equal(mime, "image/jpeg");
+    assert.equal(quality, 0.92);
+  } };
+  encodeCanvas(canvas, callback, "image/jpeg", 0.92);
 });
