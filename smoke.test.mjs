@@ -267,6 +267,16 @@ try {
       const expectedFit = await verticalPixels(baselineVertical);
       const actualFit = await verticalPixels(refactorVertical);
       check("PC: 4:5 가로형·원본 비율 맞춤 픽셀이 원본과 일치한다", JSON.stringify(expectedFit) === JSON.stringify(actualFit), JSON.stringify({ expectedFit, actualFit }));
+      // Check the unconstrained ratio path after switching from a fixed ratio.
+      const setFreeRatio = async p => {
+        await p.locator('#ratioPills .pill[data-ratio="free"]').evaluate(button => button.click());
+        await p.waitForTimeout(550);
+      };
+      await setFreeRatio(baselineVertical);
+      await setFreeRatio(refactorVertical);
+      const expectedFree = await verticalPixels(baselineVertical);
+      const actualFree = await verticalPixels(refactorVertical);
+      check("PC: 자유 비율 전환 후 픽셀이 원본과 일치한다", JSON.stringify(expectedFree) === JSON.stringify(actualFree), JSON.stringify({ expectedFree, actualFree }));
       await baselineVertical.close();
       await refactorVertical.close();
     }
