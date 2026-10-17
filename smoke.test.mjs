@@ -224,6 +224,22 @@ try {
     }
     check("PC: 저장 파일은 원본 해상도", res.dims === `${savedW} × ${savedH} px`, `${res.dims} vs ${savedW}x${savedH}`);
 
+    check("PC: JPEG 저장 파일 시그니처와 확장자 정상", head[0] === 0xff && head[1] === 0xd8 && head[head.length - 2] === 0xff && head[head.length - 1] === 0xd9 && dl.suggestedFilename().endsWith(".jpg"));
+    check("PC: JPEG 저장 파일이 비어 있지 않다", head.length > 1024, String(head.length));
+
+    // 같은 이미지에 PNG 저장을 선택해 파일 시그니처와 실제 픽셀 치수를 검사한다.
+    await page.locator('#formatSeg button[data-val="png"]').click();
+    await page.waitForTimeout(350);
+    const pngDims = await page.locator("#dimsReadout").textContent();
+    const [pngDownload] = await Promise.all([page.waitForEvent("download"), page.click("#exportBtn")]);
+    const pngBytes = await readFile(await pngDownload.path());
+    const pngMagic = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+    check("PC: PNG 저장 파일 시그니처와 확장자 정상", pngBytes.subarray(0, 8).equals(pngMagic) && pngDownload.suggestedFilename().endsWith(".png"));
+    const pngWidth = pngBytes.readUInt32BE(16), pngHeight = pngBytes.readUInt32BE(20);
+    check("PC: PNG 저장 파일도 원본 해상도", pngDims === `${pngWidth} × ${pngHeight} px`, `${pngDims} vs ${pngWidth}x${pngHeight}`);
+    check("PC: PNG 저장 파일이 비어 있지 않다", pngBytes.length > 1024, String(pngBytes.length));
+
+
     check("PC: 자바스크립트 오류 없음", errors.length === 0, errors.join(" | "));
     await page.close();
   }
