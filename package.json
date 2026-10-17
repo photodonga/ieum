@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "eslint index.html src/app.js",
+    "lint": "eslint index.html 'src/**/*.js'",
     "test": "npm run lint && node smoke.test.mjs"
   },
   "devDependencies": {
