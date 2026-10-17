@@ -210,6 +210,11 @@ try {
       const baselineVertical = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       await baselineVertical.goto(PAGE.replace("/index.html", "/.baseline/index.html"));
       await addPhotos(baselineVertical);
+      // Match the refactor page's preceding remove/undo sequence exactly.
+      await baselineVertical.locator('li.photo-item [data-act="remove"]').first().click();
+      await baselineVertical.waitForTimeout(300);
+      await baselineVertical.click("#undoBtn");
+      await baselineVertical.waitForTimeout(400);
       await baselineVertical.click("#dirVertical");
       await baselineVertical.waitForTimeout(450);
       const verticalPixels = async p => p.evaluate(() => {
