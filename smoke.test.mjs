@@ -240,6 +240,21 @@ try {
       const expectedPreset = await verticalPixels(baselineVertical);
       const actualPreset = await verticalPixels(refactorVertical);
       check("PC: 출력 1600px·간격 없음 설정 픽셀이 원본과 일치한다", JSON.stringify(expectedPreset) === JSON.stringify(actualPreset), JSON.stringify({ expectedPreset, actualPreset }));
+      // Exercise custom output and wide spacing, not just the default/preset path.
+      const setCustomOptions = async p => {
+        await p.locator('#outputPills .pill[data-preset="custom"]').evaluate(button => button.click());
+        await p.locator('#outputCustomInput').evaluate(input => {
+          input.value = "2300";
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+        await p.locator('#spacingPills .pill[data-spacing="wide"]').evaluate(button => button.click());
+        await p.waitForTimeout(500);
+      };
+      await setCustomOptions(baselineVertical);
+      await setCustomOptions(refactorVertical);
+      const expectedCustom = await verticalPixels(baselineVertical);
+      const actualCustom = await verticalPixels(refactorVertical);
+      check("PC: 사용자 지정 2300px·넓은 간격 픽셀이 원본과 일치한다", JSON.stringify(expectedCustom) === JSON.stringify(actualCustom), JSON.stringify({ expectedCustom, actualCustom }));
       await baselineVertical.close();
       await refactorVertical.close();
     }
