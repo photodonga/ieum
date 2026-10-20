@@ -17,14 +17,19 @@
 - 이미지 계산: `src/composite-geometry.js`, `src/crop-geometry.js`, `src/transform-math.js`
 - 원근 보정: `src/perspective-renderer.js`; 사진 이력 상태: `src/photo-state.js`
 - 출력 어댑터: `src/canvas-encoder.js`, `src/browser-download.js`
-- 테스트: `npm ci` 후 `npx playwright install chromium`, 이어서 `npm test`
+- 테스트: Node.js 22 환경에서 `npm install` 후 `npx playwright install chromium`, 이어서 `npm test`. 현재 `package-lock.json`이 없으므로 `npm ci`는 사용하지 않습니다. 재현 가능한 잠금 설치를 위해 lock 파일 도입은 후속 과제입니다.
 - 테스트 구성: ESLint → Node 단위 테스트 → Chromium Playwright 스모크/다운로드 검증
 - ES 모듈을 사용하므로 `file://`로 열지 말고 HTTP 정적 서버를 사용해야 합니다.
-- CI 워크플로: `.github/workflows/test.yml`; 리팩터링 개발 당시에는 기존 `main`을 `.baseline`에 체크아웃해 픽셀 비교했습니다. **병합 이후 `main` 기준의 `.baseline`은 더 이상 리팩터링 이전 버전이 아니므로, 이후 회귀 비교는 고정된 이전 커밋/태그를 기준으로 변경해야 합니다.**
+- CI 워크플로: `.github/workflows/test.yml`; 현재 `.baseline`은 `main`을 체크아웃합니다. 브랜치·PR에서는 현재 `main` 대비 픽셀을 비교하지만, `main`에 직접 푸시한 경우에는 자기 자신과 비교하므로 회귀 검증으로서 의미가 없습니다. `.baseline`을 고정된 기준 커밋/태그로 변경하는 작업은 후속 과제입니다.
 - 상세 의존성 및 리팩터링 범위: `docs/REFACTORING_MAP.md`
 
 ## 현재 모듈화의 경계
 **모듈화가 완료됐다는 의미는 아닙니다.** UI, 이미지 파일 저장소, 캔버스 합성 흐름, 사진 편집 상태의 상당 부분은 여전히 `src/app.js`에서 함께 관리합니다. 분리된 모듈은 기존 계산 및 플랫폼 호출의 일부입니다. CMS API 호출, 권한 검사, 메타데이터 보존, 송고 처리는 구현되지 않았습니다.
+
+### 향후 분리 과제 (이번 정리 작업에서는 미수정)
+- `src/app.js`는 약 95KB 규모로 UI 이벤트 처리, 사진 편집 상태, 캔버스 렌더링·저장 흐름이 집중되어 있습니다.
+- 향후 CMS 통합 또는 기능 확장 시 UI 이벤트/상태 관리/합성 오케스트레이션의 단계적 분리를 검토합니다.
+- **이번 저장소 정리에서는 `src/app.js` 및 동작 코드를 수정하지 않습니다.** 기존 UI·기능·출력 픽셀 결과를 유지하며, 분리 작업은 별도 변경과 회귀 검증으로 진행해야 합니다.
 
 ## CMS 통합 검토
 권장 순서:
@@ -100,5 +105,8 @@ type ComposeResult = {
 - [ ] SVG 아이콘·웹 폰트 원출처 및 라이선스 확인
 - [ ] npm 전이 의존성 라이선스 확인 및 필요한 제3자 고지 정리
 - [ ] 외부 코드 차용·유사도 및 공개 배포 정책 최종 확인
+- [ ] `package-lock.json` 도입 및 CI의 `npm ci` 전환 검토
+- [ ] `.baseline`이 리팩터링 이전 고정 커밋/태그를 참조하도록 변경 (이번 작업 범위 제외)
+- [ ] `src/app.js` 단계적 분리 설계 (이번 작업 범위 제외)
 
 Copyright by 송은석. All Rights Reserved.
