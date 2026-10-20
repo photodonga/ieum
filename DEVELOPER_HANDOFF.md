@@ -20,7 +20,7 @@
 - 테스트: Node.js 22 환경에서 `npm install` 후 `npx playwright install chromium`, 이어서 `npm test`. 현재 `package-lock.json`이 없으므로 `npm ci`는 사용하지 않습니다. 재현 가능한 잠금 설치를 위해 lock 파일 도입은 후속 과제입니다.
 - 테스트 구성: ESLint → Node 단위 테스트 → Chromium Playwright 스모크/다운로드 검증
 - ES 모듈을 사용하므로 `file://`로 열지 말고 HTTP 정적 서버를 사용해야 합니다.
-- CI 워크플로: `.github/workflows/test.yml`; 리팩터링 개발 당시에는 기존 `main`을 `.baseline`에 체크아웃해 픽셀 비교했습니다. **병합 이후 `main` 기준의 `.baseline`은 더 이상 리팩터링 이전 버전이 아니므로, 이후 회귀 비교는 고정된 이전 커밋/태그를 기준으로 변경해야 합니다.**
+- CI 워크플로: `.github/workflows/test.yml`; 현재 `.baseline`은 `main`을 체크아웃합니다. 브랜치·PR에서는 현재 `main` 대비 픽셀을 비교하지만, `main`에 직접 푸시한 경우에는 자기 자신과 비교하므로 회귀 검증으로서 의미가 없습니다. `.baseline`을 고정된 기준 커밋/태그로 변경하는 작업은 후속 과제입니다.
 - 상세 의존성 및 리팩터링 범위: `docs/REFACTORING_MAP.md`
 
 ## 현재 모듈화의 경계
