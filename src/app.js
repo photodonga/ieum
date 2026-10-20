@@ -271,16 +271,29 @@ import * as canvasEncoder from "./canvas-encoder.js";
     });
   });
 
-  // Empty preview is the primary click-to-add target.
-  // Once photos exist, clicking photos remains reserved for selection/adjustment.
-  emptyPreview.setAttribute('role','button');
-  emptyPreview.setAttribute('tabindex','0');
-  emptyPreview.setAttribute('aria-label','사진 추가');
+  // On touch devices only the native file input over the centered icon opens
+  // the picker. Desktop keeps the whole empty preview clickable and keyboard-usable.
+  const touchPicker = window.matchMedia('(hover: none) and (pointer: coarse)');
+  function syncEmptyPreviewAccessibility(){
+    if (touchPicker.matches) {
+      emptyPreview.removeAttribute('role');
+      emptyPreview.removeAttribute('tabindex');
+      emptyPreview.removeAttribute('aria-label');
+    } else {
+      emptyPreview.setAttribute('role','button');
+      emptyPreview.setAttribute('tabindex','0');
+      emptyPreview.setAttribute('aria-label','사진 추가');
+    }
+  }
+  syncEmptyPreviewAccessibility();
+  touchPicker.addEventListener('change', syncEmptyPreviewAccessibility);
   emptyPreview.addEventListener('click',(e)=>{
+    if (touchPicker.matches) return;
     e.stopPropagation();
     if(!photos.length) fileInput.click();
   });
   emptyPreview.addEventListener('keydown',(e)=>{
+    if (touchPicker.matches) return;
     if(!photos.length && (e.key==='Enter'||e.key===' ')){
       e.preventDefault();
       fileInput.click();
