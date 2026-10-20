@@ -18,10 +18,10 @@ python3 -m http.server 8000
 
 ## 개발 환경 및 테스트
 
-Node.js 22 기준입니다. 현재 저장소에는 `package-lock.json`이 없으므로 `npm ci` 대신 `npm install`을 사용합니다.
+Node.js 22 기준입니다. `package-lock.json`에 고정된 의존성을 `npm ci`로 설치합니다.
 
 ```sh
-npm install
+npm ci
 npx playwright install chromium
 npm test
 ```

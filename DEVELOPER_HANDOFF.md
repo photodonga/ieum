@@ -17,7 +17,7 @@
 - 이미지 계산: `src/composite-geometry.js`, `src/crop-geometry.js`, `src/transform-math.js`
 - 원근 보정: `src/perspective-renderer.js`; 사진 이력 상태: `src/photo-state.js`
 - 출력 어댑터: `src/canvas-encoder.js`, `src/browser-download.js`
-- 테스트: Node.js 22 환경에서 `npm install` 후 `npx playwright install chromium`, 이어서 `npm test`. 현재 `package-lock.json`이 없으므로 `npm ci`는 사용하지 않습니다. 재현 가능한 잠금 설치를 위해 lock 파일 도입은 후속 과제입니다.
+- 테스트: Node.js 22 환경에서 `npm ci` 후 `npx playwright install chromium`, 이어서 `npm test`. `package-lock.json`으로 설치 버전을 고정합니다.
 - 테스트 구성: ESLint → Node 단위 테스트 → Chromium Playwright 스모크/다운로드 검증
 - ES 모듈을 사용하므로 `file://`로 열지 말고 HTTP 정적 서버를 사용해야 합니다.
 - CI 워크플로: `.github/workflows/test.yml`; 현재 `.baseline`은 `main`을 체크아웃합니다. 브랜치·PR에서는 현재 `main` 대비 픽셀을 비교하지만, `main`에 직접 푸시한 경우에는 자기 자신과 비교하므로 회귀 검증으로서 의미가 없습니다. `.baseline`을 고정된 기준 커밋/태그로 변경하는 작업은 후속 과제입니다.
@@ -105,7 +105,7 @@ type ComposeResult = {
 - [ ] SVG 아이콘·웹 폰트 원출처 및 라이선스 확인
 - [ ] npm 전이 의존성 라이선스 확인 및 필요한 제3자 고지 정리
 - [ ] 외부 코드 차용·유사도 및 공개 배포 정책 최종 확인
-- [ ] `package-lock.json` 도입 및 CI의 `npm ci` 전환 검토
+- [x] `package-lock.json` 도입 및 CI의 `npm ci` 전환
 - [ ] `.baseline`이 리팩터링 이전 고정 커밋/태그를 참조하도록 변경 (이번 작업 범위 제외)
 - [ ] `src/app.js` 단계적 분리 설계 (이번 작업 범위 제외)
 
