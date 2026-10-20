@@ -27,7 +27,7 @@
 <span class="count" id="photoCount">0장</span>
 </div>
 <div id="dropzone" hidden aria-hidden="true"></div>
-<input accept="image/*" hidden="" id="fileInput" multiple="" type="file"/>
+
 <ul class="photo-list" id="photoList"></ul>
 <div class="list-footer">
 <button class="text-btn" id="clearBtn">전체 비우기</button>
@@ -230,8 +230,12 @@
 </div>
 </div>
 <div class="empty-preview" id="emptyPreview">
-<svg fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" viewbox="0 0 24 24"><rect height="18" rx="2" width="18" x="3" y="3"></rect><circle cx="8.5" cy="9.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg>
-<div class="empty-preview-title">사진을 드래그하거나 눌러서 추가하세요</div>
+<svg class="empty-preview-desktop-icon" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" viewbox="0 0 24 24"><rect height="18" rx="2" width="18" x="3" y="3"></rect><circle cx="8.5" cy="9.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg>
+<label class="empty-preview-mobile-add" for="fileInput">
+<svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" viewBox="0 0 24 24"><rect height="18" rx="2" width="18" x="3" y="3"></rect><circle cx="8.5" cy="9.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path><path d="M18 17v6m-3-3h6" stroke-width="2"></path></svg>
+<input accept="image/*" aria-label="사진 추가" id="fileInput" multiple type="file"/>
+</label>
+<div class="empty-preview-title"><span class="empty-preview-desktop-text">사진을 드래그하거나 눌러서 추가하세요</span><span class="empty-preview-mobile-text">버튼을 눌러 사진을 추가하세요</span></div>
 <div class="empty-preview-sub">여러 장을 한 번에 선택할 수 있어요</div>
 </div>
 </div>
