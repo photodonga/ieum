@@ -1,5 +1,5 @@
 // 이음 스모크 테스트 — 실제 브라우저(Chromium)로 index.html을 열어 핵심 동작을 확인한다.
-// 실행: npm test   (처음 한 번은 npm install && npx playwright install chromium)
+// 실행: npm test   (처음 한 번은 npm ci && npx playwright install chromium)
 // 오늘 실제로 났던 버그들을 다시 잡도록 만든 검사들이다.
 import { chromium } from "playwright";
 import { fileURLToPath } from "node:url";
@@ -337,7 +337,29 @@ try {
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto(PAGE);
-    await addPhotos(page);
+    const mobilePicker = page.locator(".empty-preview-mobile-add");
+    const mobileInput = page.locator("#fileInput");
+    check("모바일: 중앙 사진 추가 아이콘이 표시된다", await mobilePicker.isVisible());
+    const pickerSize = await mobilePicker.boundingBox();
+    check("모바일: 사진 추가 터치 영역이 44px 이상이다", !!pickerSize && pickerSize.width >= 44 && pickerSize.height >= 44);
+    check("모바일: 파일 입력이 중앙 아이콘 위에 배치된다", await mobileInput.evaluate((input) => {
+      const a = input.getBoundingClientRect();
+      const b = input.closest("label").getBoundingClientRect();
+      return Math.abs(a.x - b.x) < 1 && Math.abs(a.y - b.y) < 1 && Math.abs(a.width - b.width) < 1;
+    }));
+    let pickerCount = 0;
+    page.on("filechooser", () => { pickerCount++; });
+    await page.locator("#emptyPreview").click({ position: { x: 10, y: 10 } });
+    await page.waitForTimeout(150);
+    check("모바일: 빈 영역 터치는 사진 선택을 열지 않는다", pickerCount === 0);
+    const chooserPromise = page.waitForEvent("filechooser");
+    await mobilePicker.click();
+    const chooser = await chooserPromise;
+    check("모바일: 중앙 아이콘 터치로 파일 선택이 열린다", pickerCount === 1);
+    const files = await makePhotos(page, SPECS);
+    await chooser.setFiles(files);
+    await page.waitForFunction(() => document.querySelectorAll("li.photo-item").length === 3, null, { timeout: 10000 });
+    await page.waitForTimeout(400);
     const s = await state(page);
     const cols = await slotColors(page);
     check("모바일: 고른 순서대로 추가된다", s.names.join() === "p1,p2,p3", s.names.join());
