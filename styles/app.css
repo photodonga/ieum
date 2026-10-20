@@ -756,6 +756,30 @@
   .empty-preview-title{font-size:14px;color:var(--ink-soft);font-weight:600;}
   .empty-preview-sub{margin-top:6px;font-size:11.5px;color:var(--ink-faint);}
   .empty-preview:hover .empty-preview-title{color:var(--accent);}
+
+  /* The native file input sits on the mobile icon so iOS anchors its picker there. */
+  .empty-preview-mobile-add,.empty-preview-mobile-text{display:none;}
+  .empty-preview-mobile-add{position:relative;}
+  .empty-preview-mobile-add #fileInput{display:none;}
+  @media (hover: none) and (pointer: coarse){
+    .empty-preview{cursor:default;}
+    .empty-preview-desktop-icon,.empty-preview-desktop-text{display:none;}
+    .empty-preview-mobile-text{display:inline;}
+    .empty-preview-mobile-add{
+      display:flex; align-items:center; justify-content:center;
+      width:60px; height:60px; min-width:44px; min-height:44px;
+      color:var(--accent); cursor:pointer;
+      border-radius:var(--radius-sm);
+    }
+    .empty-preview-mobile-add svg{width:44px;height:44px;stroke:currentColor;margin:0;pointer-events:none;}
+    .empty-preview-mobile-add #fileInput{
+      display:block; position:absolute; inset:0; width:100%; height:100%;
+      opacity:0; cursor:pointer; font-size:0; margin:0;
+    }
+    .empty-preview-mobile-add:focus-within{outline:2px solid var(--accent);outline-offset:3px;}
+    .empty-preview:hover .empty-preview-title{color:var(--ink-soft);}
+  }
+
   #photosCol .panel-head h2{white-space:nowrap;}
 
 
