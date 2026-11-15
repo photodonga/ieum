@@ -1231,3 +1231,17 @@ html:root #controlsCol .pill{padding:7px 9px;}
   html:root #controlTabs:has(#adjustTabBtn.active) #settingsModeSeg{display:none;}
   html:root #photoList .item-actions .icon-btn{width:38px; height:38px; min-width:38px; min-height:38px; max-width:38px; max-height:38px;}
 }
+
+/* 휴대폰 고급 설정: 기본 설정 아래로 펼침 */
+#mobileAdvToggle{display:none;}
+@media (max-width:700px){
+  html:root #controlTabs #settingsModeSeg{display:none;}
+  html:root #settingsTabContent{display:block;}
+  html:root #settingsTabContent > .settings-pane{visibility:visible;}
+  html:root #settingsTabContent .settings-adv{display:none;}
+  html:root #settingsTabContent.mobile-adv-open .settings-adv{display:block; padding-top:12px;}
+  html:root #mobileAdvToggle{display:flex; align-items:center; justify-content:space-between; width:100%; height:40px; margin-top:12px; padding:0 2px; border:0; border-top:1px solid var(--panel-border); background:transparent; color:var(--ink-soft); font:inherit; font-size:13px; font-weight:500; cursor:pointer;}
+  html:root #mobileAdvToggle svg{transition:transform .18s ease;}
+  html:root #settingsTabContent.mobile-adv-open #mobileAdvToggle{color:var(--ink);}
+  html:root #settingsTabContent.mobile-adv-open #mobileAdvToggle svg{transform:rotate(180deg);}
+}

@@ -2270,6 +2270,18 @@ import * as canvasEncoder from "./canvas-encoder.js";
     const b = e.target.closest('button[data-mode]');
     if (b) setSettingsMode(b.dataset.mode);
   });
+  // 휴대폰: [기본|고급] 대신 기본 설정 아래에 '고급 설정'을 펼쳐 연다.
+  const advToggle = document.createElement('button');
+  advToggle.type = 'button';
+  advToggle.id = 'mobileAdvToggle';
+  advToggle.setAttribute('aria-expanded', 'false');
+  advToggle.innerHTML = '<span>고급 설정</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+  settingsContent.insertBefore(advToggle, advWrap);
+  advToggle.addEventListener('click', () => {
+    const open = !settingsContent.classList.contains('mobile-adv-open');
+    settingsContent.classList.toggle('mobile-adv-open', open);
+    advToggle.setAttribute('aria-expanded', String(open));
+  });
 
   /* ---------- init ---------- */
   loadSettings();
