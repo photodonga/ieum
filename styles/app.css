@@ -1,24 +1,28 @@
 
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+  /* 숫자용 IBM Plex Mono만 확장 프로그램 안에 넣는다(라틴 문자, SIL OFL). 한글은 시스템 폰트. */
+  @font-face{font-family:"IBM Plex Mono"; font-style:normal; font-weight:500; font-display:swap; src:url("../fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2");}
+  @font-face{font-family:"IBM Plex Mono"; font-style:normal; font-weight:600; font-display:swap; src:url("../fonts/ibm-plex-mono-latin-600-normal.woff2") format("woff2");}
 
   /* ---------- Base ---------- */
   :root{
     color-scheme:light;
-    --bg:#EEF0F3;
-    --bg-grid:rgba(15,23,42,.05);
-    --panel:rgba(255,255,255,.64);
+    --bg:#F3F3F1;
+    --bg-grid:transparent;
+    --panel:#ffffff;
     --panel-solid:#ffffff;
     --panel-border:rgba(15,23,42,.09);
     --ink:#1C2024;
     --ink-soft:#5B6470;
     --ink-faint:#9199A6;
-    --accent:#1E3A8C;
-    --accent-strong:#14285F;
-    --accent-wash:rgba(30,58,140,.10);
+    --accent:#2FA88A;
+    --accent-strong:#1F7D66;
+    --accent-wash:rgba(47,168,138,.12);
+    /* 흰 글씨가 올라가는 꽉 찬 버튼용 진한 민트 (흰 글씨 대비 4.5:1) */
+    --accent-fill:#1F8569;
     --accent-ink:#FFFFFF;
     --danger:#C6483A;
     --danger-wash:rgba(198,72,58,.10);
-    --shadow:0 24px 48px -28px rgba(15,23,42,.35);
+    --shadow:none;
     --radius-lg:22px;
     --radius-md:14px;
     --radius-sm:9px;
@@ -27,39 +31,41 @@
     :root:not([data-theme="light"]){
       color-scheme:dark;
       --bg:#15171B;
-      --bg-grid:rgba(255,255,255,.065);
-      --panel:rgba(35,38,44,.94);
+      --bg-grid:transparent;
+      --panel:#23262C;
       --panel-solid:#23262C;
       --panel-border:rgba(184,193,207,.23);
       --ink:#F4F5F7;
       --ink-soft:#B8C0CB;
       --ink-faint:#A4ADBA;
-      --accent:#E4BC57;
-      --accent-strong:#F0CE78;
-      --accent-wash:rgba(228,188,87,.16);
-      --accent-ink:#17191D;
+      --accent:#5FDDB9;
+      --accent-strong:#8BEBCF;
+      --accent-wash:rgba(95,221,185,.18);
+      --accent-ink:#0B1F19;
+      --accent-fill:#5FDDB9;
       --danger:#F0847A;
       --danger-wash:rgba(240,132,122,.14);
-      --shadow:0 24px 48px -28px rgba(0,0,0,.6);
+      --shadow:none;
     }
   }
   :root[data-theme="dark"]{
     color-scheme:dark;
     --bg:#15171B;
-    --bg-grid:rgba(255,255,255,.065);
-    --panel:rgba(35,38,44,.94);
+    --bg-grid:transparent;
+    --panel:#23262C;
     --panel-solid:#23262C;
     --panel-border:rgba(184,193,207,.23);
     --ink:#F4F5F7;
     --ink-soft:#B8C0CB;
     --ink-faint:#A4ADBA;
-    --accent:#E4BC57;
-    --accent-strong:#F0CE78;
-    --accent-wash:rgba(228,188,87,.16);
-    --accent-ink:#17191D;
+    --accent:#5FDDB9;
+    --accent-strong:#8BEBCF;
+    --accent-wash:rgba(95,221,185,.18);
+    --accent-ink:#0B1F19;
+    --accent-fill:#5FDDB9;
     --danger:#F0847A;
     --danger-wash:rgba(240,132,122,.14);
-    --shadow:0 24px 48px -28px rgba(0,0,0,.6);
+    --shadow:none;
   }
 
   *{box-sizing:border-box;}
@@ -75,7 +81,7 @@
     margin:0;
     background:var(--bg);
     color:var(--ink);
-    font-family:"IBM Plex Sans KR",-apple-system,BlinkMacSystemFont,"Malgun Gothic",sans-serif;
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
     -webkit-font-smoothing:antialiased;
     /* dragging sliders/handles/list items easily catches nearby text as a browser text-selection
        (shows as a blue highlight, feels like a bug) — turn that off app-wide, then explicitly
@@ -111,7 +117,6 @@
     width:34px;height:34px;border-radius:10px;
     background:linear-gradient(155deg, var(--accent), var(--accent-strong));
     display:flex;align-items:center;justify-content:center;
-    box-shadow:0 8px 16px -8px rgba(221,122,36,.55);
     flex:none;
   }
   .brand-mark svg{width:18px;height:18px;stroke:var(--accent-ink);}
@@ -141,8 +146,6 @@
 
   .panel{
     background:var(--panel);
-    -webkit-backdrop-filter:blur(22px) saturate(160%);
-    backdrop-filter:blur(22px) saturate(160%);
     border:1px solid var(--panel-border);
     border-radius:var(--radius-lg);
     padding:18px;
@@ -174,28 +177,10 @@
   .icon-btn:active{transform:scale(.93);}
   .icon-btn:disabled{opacity:.35; cursor:not-allowed; transform:none;}
   .icon-btn.danger:hover{color:var(--danger); background:var(--danger-wash); border-color:transparent;}
-  .icon-btn.accent{background:var(--accent); color:var(--accent-ink); border-color:transparent;}
+  .icon-btn.accent{background:var(--accent-fill); color:var(--accent-ink); border-color:transparent;}
   .icon-btn.accent:hover{background:var(--accent-strong); color:var(--accent-ink);}
   .icon-btn.on{background:var(--accent-wash); color:var(--accent); border-color:transparent;}
 
-  /* add zone */
-  .dropzone{
-    border:1.5px dashed var(--panel-border);
-    border-radius:var(--radius-md);
-    padding:30px 14px;
-    text-align:center;
-    color:var(--ink-faint);
-    font-size:13px;
-    cursor:pointer;
-    transition:border-color .15s ease, background .15s ease, padding .15s ease;
-  }
-  .dropzone svg{width:24px;height:24px; margin-bottom:9px; stroke:var(--ink-faint);}
-  .dropzone:hover, .dropzone.over{border-color:var(--accent); color:var(--accent); background:var(--accent-wash);}
-  .dropzone:hover svg, .dropzone.over svg{stroke:var(--accent);}
-  .dropzone.compact{
-    padding:10px 14px; display:flex; flex-direction:row; align-items:center; justify-content:center; gap:8px;
-  }
-  .dropzone.compact svg{width:15px;height:15px; margin:0;}
   ul.photo-list{list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:8px;}
   li.photo-item{
     display:flex; align-items:center; gap:8px;
@@ -249,10 +234,12 @@
     border-radius:6px; font-size:9px; line-height:1; padding:2px 3px;
     font-family:"IBM Plex Mono",monospace;
   }
-  .photo-name{
-    flex:1; min-width:0; font-size:12.5px; color:var(--ink-soft);
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
+  /* 한 줄 행: 손잡이 · 썸네일 · 순서 화살표 · 조정/회전/삭제 (파일명은 썸네일에 마우스를 올리면 표시) */
+  .item-actions{margin-left:auto;}
+  /* 좁은 왼쪽 칸에서도 세 버튼이 행 밖으로 넘치지 않게 조금 촘촘하게 */
+  #photoList li.photo-item{gap:6px;}
+  #photoList .drag-handle{width:12px;}
+  #photoList .item-actions .icon-btn{width:28px; height:28px; min-width:28px; min-height:28px; max-width:28px; max-height:28px;}
   .item-actions{display:flex; gap:4px; flex:none;}
   .stack-btns{display:flex; flex-direction:column; gap:2px; flex:none;}
   .stack-btns button{
@@ -307,7 +294,7 @@
     transition:background .12s ease, color .12s ease;
   }
   .seg button svg{width:14px;height:14px;}
-  .seg button.active{background:var(--accent); color:var(--accent-ink);}
+  .seg button.active{background:var(--accent-fill); color:var(--accent-ink);}
   .seg button:not(.active):hover{color:var(--ink);}
   /* compact variant for a toggle that sits inline inside a .field-label row rather than
      taking a full field row of its own (e.g. the 세로형/가로형 ratio-orientation switch) */
@@ -342,7 +329,7 @@
     font-family:"IBM Plex Mono",monospace; font-size:12px; padding:7px 11px; border-radius:9px;
     cursor:pointer;
   }
-  .pill.active{background:var(--accent); color:var(--accent-ink); border-color:transparent;}
+  .pill.active{background:var(--accent-fill); color:var(--accent-ink); border-color:transparent;}
   .pill:not(.active):hover{color:var(--ink);}
 
   .num-input, .text-input{
@@ -401,7 +388,7 @@
   .export-row{display:flex; gap:10px; margin-top:14px; align-items:center; flex-wrap:wrap;}
   .btn-primary{
     flex:1; min-width:180px;
-    background:var(--accent); color:var(--accent-ink); border:none;
+    background:var(--accent-fill); color:var(--accent-ink); border:none;
     font-family:inherit; font-weight:600; font-size:14px;
     padding:13px 18px; border-radius:12px; cursor:pointer;
     display:flex; align-items:center; justify-content:center; gap:8px;
@@ -443,11 +430,11 @@
     .mobile-side-add:active{transform:translateY(-50%) scale(.94);}
     .mobile-side-add svg{width:18px;height:18px;}
   }
-  .frame-drop-overlay{position:absolute;z-index:50;pointer-events:none;box-sizing:border-box;border:3px solid var(--accent);border-radius:4px;background:rgba(255,214,0,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.8);}
+  .frame-drop-overlay{position:absolute;z-index:50;pointer-events:none;box-sizing:border-box;border:3px solid var(--accent);border-radius:4px;background:var(--accent-wash);box-shadow:inset 0 0 0 1px rgba(255,255,255,.8);}
   .empty-slot-drop{
     position:absolute;z-index:49;pointer-events:none;box-sizing:border-box;
     border:2px dashed var(--accent);border-radius:5px;
-    background:rgba(255,214,0,.08);
+    background:var(--accent-wash);
     display:flex;align-items:center;justify-content:center;
     color:var(--accent);font-weight:700;line-height:1.2;
   }
@@ -457,11 +444,11 @@
     opacity:0;transform:scale(.7);
     transition:left .14s ease,top .14s ease,width .14s ease,height .14s ease,
                opacity .12s ease,transform .14s ease;
-    box-shadow:0 0 0 5px rgba(255,214,0,.14);
+    box-shadow:0 0 0 5px var(--accent-wash);
   }
   .insert-drop-cue.show{opacity:1;transform:scale(1);}
-  .preview-stage.preview-file-drop{outline:3px solid var(--accent);outline-offset:-3px;background:rgba(255,214,0,.08);}
-  .icon-btn.live{background:var(--accent); color:var(--accent-ink); border-color:transparent;}
+  .preview-stage.preview-file-drop{outline:3px solid var(--accent);outline-offset:-3px;background:var(--accent-wash);}
+  .icon-btn.live{background:var(--accent-fill); color:var(--accent-ink); border-color:transparent;}
   /* the edited photo gets a clean accent border; the REST of the canvas is dimmed
      by four real sibling rectangles (below), not a huge box-shadow spread — that
      trick is unreliable across browsers (notably breaks inside an overflow:hidden
@@ -526,7 +513,7 @@
 
   .edit-done{
     position:absolute; top:8px; right:8px; width:28px; height:28px; border-radius:50%;
-    background:var(--accent); color:var(--accent-ink); border:none; cursor:pointer;
+    background:var(--accent-fill); color:var(--accent-ink); border:none; cursor:pointer;
     display:flex; align-items:center; justify-content:center;
     box-shadow:0 2px 8px rgba(0,0,0,.4);
   }
@@ -544,12 +531,12 @@
   .eye-guide::before{
     content:"";
     position:absolute; left:0; right:0; top:-1px; height:1.5px;
-    background:repeating-linear-gradient(to right, #2F6FEA 0 9px, transparent 9px 16px);
+    background:repeating-linear-gradient(to right, var(--guide) 0 9px, transparent 9px 16px);
     filter:drop-shadow(0 0 1.5px rgba(0,0,0,.85)) drop-shadow(0 0 1.5px rgba(0,0,0,.85));
   }
   .eye-guide-handle{
     position:absolute; left:-7px; top:-8px; width:16px; height:16px; border-radius:50%;
-    background:#2F6FEA; border:2px solid #fff; cursor:ns-resize;
+    background:var(--guide); border:2px solid #fff; cursor:ns-resize;
     pointer-events:auto; touch-action:none;
     box-shadow:0 0 0 1px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.5);
   }
@@ -558,15 +545,13 @@
     font-size:12px; font-weight:600; color:var(--ink-soft);
     white-space:nowrap; user-select:none;
   }
-  #eyeGuideToggle.on{background:#2F6FEA; color:#fff; border-color:transparent;}
-  #eyeGuideToggle.on:hover{background:#2555C7; color:#fff;}
+  #eyeGuideToggle.on{background:var(--accent-fill); color:var(--accent-ink); border-color:transparent;}
+  #eyeGuideToggle.on:hover{background:var(--accent-strong); color:var(--accent-ink);}
 
   .preview-head-actions{display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end;}
   .history-group{display:flex; align-items:center; gap:4px;}
   /* redo re-uses the undo arrow's svg mirrored, instead of drawing a second icon */
   .history-group #redoBtn svg{transform:scaleX(-1);}
-  .history-group .icon-btn:not(:disabled){border-color:var(--accent); color:var(--accent);}
-  .history-group .icon-btn:not(:disabled):hover{background:var(--accent-wash);}
 
   .preview-body{display:flex; flex-direction:column;}
   .preview-body .preview-stage{width:100%;}
@@ -600,11 +585,6 @@
   .btn-outline:hover{color:var(--ink); border-color:color-mix(in srgb, var(--ink-faint) 50%, transparent);}
   /* ---------- Mobile ---------- */
   @media (max-width:600px){
-    .dropzone{padding:40px 14px;}
-    .dropzone svg{width:30px;height:30px;}
-    .dropzone div{font-size:13.5px;}
-    .dropzone.compact{padding:12px 14px;}
-    .dropzone.compact svg{width:15px;height:15px;}
   }
 
   @media (max-width:700px){
@@ -686,9 +666,8 @@
 
   /* 현재 사진 조정 대상으로 선택된 행 */
   li.photo-item.selected{
-    background:rgba(38,73,154,.08);
-    border-color:rgba(38,73,154,.42);
-    box-shadow:0 0 0 1px rgba(38,73,154,.08) inset;
+    background:var(--accent-wash);
+    border-color:var(--accent);
   }
 
 
@@ -1071,3 +1050,198 @@
     outline:2px solid var(--accent);
     outline-offset:2px;
   }
+
+  /* ---------- 형제 프로그램(FRAME·KPPA 알리미·연합뉴시스원)과 같은 계열 ----------
+     평면(그라데이션·그림자·유리 효과 없음), 바탕 없는 색 아이콘 + 보통 굵기 제목,
+     알약 모양 버튼, 연한 색 바탕의 주 버튼. 강조색만 이음 고유의 민트. */
+  .brand-mark{background:none; box-shadow:none; width:auto; height:auto; border-radius:0;}
+  .brand-mark svg{stroke:var(--accent); width:26px; height:26px;}
+  .brand h1{font-weight:400; font-size:22px; letter-spacing:0;}
+  .preview-stage{background-image:none;}
+  #canvas{box-shadow:none; border-radius:0;}
+  .pill,
+  .seg:not(#controlTabs), .seg:not(#controlTabs) button,
+  .btn-outline, .icon-btn, .stack-btns button{border-radius:999px;}
+  .btn-primary, #previewCol .btn-primary.btn-primary{
+    background:var(--accent-wash); color:var(--accent-strong); border-radius:999px; box-shadow:none;
+  }
+  .btn-primary svg{stroke:var(--accent-strong);}
+  .btn-primary:hover{background:color-mix(in srgb, var(--accent) 20%, transparent);}
+  .app-footer{font-size:12px; color:var(--ink-soft);}
+
+  /* 설명 문구 정리: 안내 문구 자리는 남기지 않는다(요소는 스크립트가 쓰므로 숨기기만). */
+  #ratioCustomHint, #editHint, #editHint.preview-hint[hidden]{display:none !important;}
+  /* 저작권·문의 줄은 미리보기 패널 맨 아래, 스크롤 없이 보이는 자리 */
+  #previewCol .app-footer{margin-top:12px; padding:10px 0 0; font-size:12px; color:var(--ink-soft);}
+
+  /* 확장 프로그램은 데스크톱 전용: 페이지 전체가 한 화면 안에 딱 맞게 (스크롤 없음).
+     아래 여백(--page-bottom)은 미리보기 높이 계산에서도 같이 뺀다(app.js fitPreviewToViewport). */
+  /* --guide: 사진 위에 그리는 눈높이선 색. 어떤 사진 위에서도 보이도록 밝은 민트 + 어두운 그림자 */
+  :root{--page-bottom:24px; --guide:#3FE0B6;}
+  @media (min-width:701px){
+    .wrap{padding-bottom:var(--page-bottom);}
+  }
+  @media (min-width:1100px), (orientation:landscape) and (min-width:800px){
+    .grid{height:var(--grid-fit-height, auto); grid-template-rows:minmax(0,auto) minmax(210px,1fr);}
+    /* 설정 패널은 둥근 테두리를 유지한 채 패널 안에서만 스크롤 */
+    #controlsCol{overflow:hidden; align-self:stretch; display:flex; flex-direction:column;}
+    #controlsCol > .panel{min-height:0; max-height:100%; overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; overscroll-behavior:contain;}
+  }
+
+/* ---------- 정렬·크기 통일 ---------- */
+@media (min-width:1100px), (orientation:landscape) and (min-width:800px){
+  /* 1) 세 패널 제목: 같은 크기·같은 줄 높이(32px) → 왼쪽·오른쪽 제목이 한 줄에 */
+  html:root .panel-head, html:root #controlsCol #controlTabs{min-height:32px; margin-bottom:14px; align-items:center;}
+  html:root .panel-head h2, html:root #controlsCol #settingsTabBtn{font-size:14px; font-weight:600; line-height:32px;}
+  html:root .preview-toolbar-head{margin-bottom:14px;}
+  /* 2) 아이콘 버튼은 모두 32px, 아이콘 16px */
+  html:root .icon-btn, html:root #photoList .item-actions .icon-btn{width:32px;height:32px;min-width:32px;min-height:32px;max-width:32px;max-height:32px;}
+  html:root .icon-btn svg{width:16px;height:16px;}
+  html:root #previewZoomSeg{height:32px; align-items:center;}
+  html:root .history-group{display:flex; gap:4px;}
+  html:root .preview-head-actions{gap:16px;}
+  /* 3) 사진 행: 스크롤 자리 비우지 않아 행 오른쪽 끝 = 패널 안쪽 끝 */
+  html:root #photosCol .photo-list{scrollbar-gutter:auto; padding-right:0;}
+  html:root #photoList li.photo-item{padding:8px 8px 8px 6px;}
+  html:root #photoList .thumb{width:40px;height:40px;}
+  /* 4) 아래 줄: 정보는 왼쪽에 한 줄로 모으고, 저장 버튼은 미리보기 오른쪽 끝·같은 높이 */
+  html:root .preview-bottom-bar{margin-top:14px; align-items:center;}
+  html:root .preview-bottom-bar .readout{display:flex; justify-content:flex-start; gap:0; min-height:36px;}
+  html:root .preview-bottom-bar .readout > span{flex:none;}
+  html:root .preview-bottom-bar .btn-primary, html:root #previewCol .btn-primary.btn-primary{height:36px; padding:0 20px; min-width:150px; font-size:13px;}
+  html:root .preview-bottom-bar .btn-primary svg{width:16px;height:16px;}
+}
+@media (min-width:1100px), (orientation:landscape) and (min-width:800px){
+  html:root .preview-bottom-bar .readout > span + span::before{content:"·"; margin:0 10px; color:var(--ink-faint); opacity:.7;}
+  html:root .preview-bottom-bar .readout > span{text-align:left;}
+}
+/* ---------- 아이콘 크기·선 굵기 통일 ----------
+   단독 아이콘 버튼 16px / 글자 옆 아이콘 14px / 선 굵기 2px 하나로 */
+html:root .icon-btn svg, html:root .edit-done svg{width:16px; height:16px; stroke-width:2;}
+html:root .edit-done{width:32px; height:32px;}
+html:root .seg button svg, html:root .btn-primary svg, html:root .preview-bottom-bar .btn-primary svg{width:14px; height:14px;}
+html:root .stack-btns button{width:24px; height:18px;}
+html:root .stack-btns svg{width:14px; height:14px; stroke-width:2;}
+html:root details.advanced summary svg{width:12px; height:12px; stroke-width:2;}
+html:root .empty-preview svg{width:32px; height:32px;}
+
+/* 실행 취소·다시 실행: 가운데 구분선이 있는 알약 하나로 묶음 ('미리보기 크기'와 같은 모양) */
+html:root .history-group{gap:0; border:1px solid var(--panel-border); border-radius:999px; padding:2px; background:var(--panel-solid); height:32px; box-sizing:border-box;}
+html:root .history-group .icon-btn{border:0; width:36px; max-width:36px; min-width:36px; height:26px; min-height:26px; max-height:26px; background:transparent;}
+html:root .history-group .icon-btn:not(:disabled){color:var(--ink-soft);}
+html:root .history-group #undoBtn{border-right:1px solid var(--panel-border); border-radius:999px 0 0 999px;}
+html:root .history-group #redoBtn{border-radius:0 999px 999px 0;}
+html:root .history-group .icon-btn:not(:disabled):hover{color:var(--accent-strong); background:var(--accent-wash);}
+html:root .history-group .icon-btn:active{transform:none;}
+
+/* ---------- 두 칸의 아래 끝 맞추기 ----------
+   왼쪽 '전체 비우기' 위 구분선과 오른쪽 저작권 줄 위 구분선을 같은 높이에,
+   두 패널의 아래 끝도 같은 높이에 둔다. */
+@media (min-width:1100px), (orientation:landscape) and (min-width:800px){
+  html:root #previewCol{align-self:stretch;}
+  html:root #previewCol > .panel{height:100%; display:flex; flex-direction:column; box-sizing:border-box;}
+  html:root .preview-bottom-bar{margin-bottom:12px;}
+  html:root .list-footer, html:root #previewCol .app-footer{
+    box-sizing:border-box; height:29px; margin-bottom:0; padding:10px 0 0;
+    border-top:1px solid var(--panel-border); display:flex; align-items:center; line-height:18px;
+  }
+  html:root #previewCol .app-footer{margin-top:auto; justify-content:center;}
+  html:root .list-footer{margin-top:14px;}
+  html:root .list-footer .text-btn{line-height:18px; padding:0;}
+}
+
+/* ---------- 설정 패널 [기본 | 고급] ---------- */
+#settingsTabContent{display:grid;}
+#settingsTabContent > .settings-pane{grid-area:1 / 1; min-width:0;}
+#settingsTabContent .settings-adv{visibility:hidden;}
+#settingsTabContent.mode-adv .settings-adv{visibility:visible;}
+#settingsTabContent.mode-adv .settings-basic{visibility:hidden;}
+#advancedDetails[hidden]{display:none !important;}
+html:root #controlsCol #controlTabs{justify-content:space-between;}
+html:root #controlTabs #settingsModeSeg{flex:none; margin-left:auto; border:1px solid var(--panel-border); background:var(--panel-solid); border-radius:999px; padding:2px; gap:1px;}
+html:root #controlTabs #settingsModeSeg button{flex:none; font-size:11.5px; font-weight:500; padding:4px 12px; border-radius:999px; color:var(--ink-soft); background:transparent; pointer-events:auto; cursor:pointer;}
+html:root #controlTabs #settingsModeSeg button.active{background:var(--accent-fill); color:var(--accent-ink);}
+.field-label-inline{display:flex; align-items:center; justify-content:space-between; gap:8px; white-space:nowrap; margin-bottom:0;}
+.field-label-inline .seg{flex:none; width:auto;}
+html:root .field-label-inline .seg button{flex:none; padding:4px 12px;}
+.settings-adv .adv-body{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.settings-adv .adv-body .checkline{flex:1; min-width:0; white-space:nowrap;}
+.settings-adv .adv-body .num-input{width:76px; flex:none; margin:0; padding-left:10px; padding-right:8px;}
+.settings-adv .field{margin-bottom:16px;}
+.settings-adv .adv-body{padding-top:0;}
+@media (min-width:1100px), (orientation:landscape) and (min-width:800px){
+  html:root #settingsTabContent .field{margin-bottom:14px;}
+  html:root #settingsTabContent .settings-pane > .field:last-child, html:root #settingsTabContent .settings-pane > .adv-body:last-child{margin-bottom:0;}
+}
+
+/* 좁은 왼쪽 칸에서도 간격 버튼 4개가 한 줄에 들어오도록 */
+html:root #controlsCol .pillrow{gap:5px;}
+html:root #controlsCol .pill{padding:7px 9px;}
+
+/* ---------- 기본·고급 줄 맞춤 ----------
+   모든 항목 이름 줄은 같은 높이(30px), 항목 사이 간격도 같게 → 두 화면의 줄이 같은 높이에 온다 */
+@media (min-width:1100px), (orientation:landscape) and (min-width:800px){
+  html:root #settingsTabContent .field-label{min-height:30px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;}
+  html:root #settingsTabContent .field{margin-bottom:14px;}
+  html:root #settingsTabContent .fit-mode-seg{width:auto;}
+  html:root #settingsTabContent .settings-adv .adv-body{min-height:36px;}
+  html:root #outputPills .pill{padding:7px 9px;}
+}
+#formatSeg[hidden]{display:none !important;}
+@media (min-width:1100px), (orientation:landscape) and (min-width:800px){
+  html:root #settingsTabContent .adv-body.adv-body-inline{min-height:0; padding:0; margin:0; display:flex; align-items:center; gap:6px; flex:none;}
+  html:root .adv-body-inline .checkline{font-size:12px; gap:5px; flex:none;}
+  html:root .adv-body-inline .num-input{width:64px; height:28px; padding:0 8px; font-size:12px;}
+  html:root #settingsTabContent .pill{height:32px; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; padding-top:0; padding-bottom:0;}
+}
+
+@media (min-width:1100px), (orientation:landscape) and (min-width:800px){
+  html:root #settingsTabContent .field-label{min-height:28px; margin-bottom:6px;}
+  html:root #settingsTabContent .pill{height:30px;}
+}
+@media (min-width:1100px), (orientation:landscape) and (min-width:800px){
+  /* 항목 이름 줄 높이를 작은 버튼(세로형/가로형) 높이와 같게 고정 → 기본·고급 줄이 픽셀 단위로 맞음 */
+  html:root #settingsTabContent .field-label{height:30px; min-height:30px; box-sizing:border-box;}
+  html:root #settingsTabContent .field-label .seg-sm{height:30px; box-sizing:border-box;}
+  html:root #settingsTabContent .field{margin-bottom:12px;}
+}
+
+/* ---------- 사진 조정 중 툴바: 좁은 창에서도 한 줄 유지 ----------
+   조정 슬라이더가 들어오면 툴바가 두 줄로 밀려 미리보기 뒤로 숨던 문제 수정 */
+@media (min-width:701px){
+  html:root .preview-toolbar-head{flex-wrap:nowrap; min-width:0;}
+  html:root #previewAdjustDock{flex:1 1 auto; min-width:0; overflow:hidden;}
+  html:root #previewAdjustDock #adjustFieldsWrap{display:flex; align-items:center; gap:10px; min-width:0;}
+  html:root #previewAdjustDock .adjust-field{flex:1 1 0; min-width:70px;}
+  html:root #previewAdjustDock .adjust-btns{flex:none; display:flex; gap:6px;}
+  html:root .preview-head-actions{flex:none;}
+  html:root .preview-toolbar-head:has(#previewAdjustDock:not([hidden])) .eyeguide-group .eyeguide-label{display:none;}
+}
+@media (min-width:701px){
+  html:root #previewAdjustDock .adjust-btns{flex-direction:row; flex-wrap:nowrap; margin:0;}
+  html:root #previewAdjustDock .adjust-btns .btn-outline{white-space:nowrap; height:32px; padding:0 12px; display:inline-flex; align-items:center;}
+}
+@media (min-width:701px){
+  /* 사진 조정 슬라이더가 들어와도 툴바 높이는 32px 그대로 → 미리보기가 1px도 움직이지 않게 */
+  html:root .preview-toolbar-head{height:32px; min-height:32px;}
+  html:root #previewAdjustDock, html:root #previewAdjustDock #adjustFieldsWrap{height:32px; max-height:32px;}
+}
+@media (max-width:700px){
+  /* 휴대폰: 사진 조정 탭에서는 [기본|고급] 전환을 숨기고, 행 버튼은 손가락으로 누르기 좋은 38px 유지 */
+  html:root #controlTabs:has(#adjustTabBtn.active) #settingsModeSeg{display:none;}
+  html:root #photoList .item-actions .icon-btn{width:38px; height:38px; min-width:38px; min-height:38px; max-width:38px; max-height:38px;}
+}
+
+/* 휴대폰 고급 설정: 기본 설정 아래로 펼침 */
+#mobileAdvToggle{display:none;}
+@media (max-width:700px){
+  html:root #controlTabs #settingsModeSeg{display:none;}
+  html:root #settingsTabContent{display:block;}
+  html:root #settingsTabContent > .settings-pane{visibility:visible;}
+  html:root #settingsTabContent .settings-adv{display:none;}
+  html:root #settingsTabContent.mobile-adv-open .settings-adv{display:block; padding-top:12px;}
+  html:root #mobileAdvToggle{display:flex; align-items:center; justify-content:space-between; width:100%; height:40px; margin-top:12px; padding:0 2px; border:0; border-top:1px solid var(--panel-border); background:transparent; color:var(--ink-soft); font:inherit; font-size:13px; font-weight:500; cursor:pointer;}
+  html:root #mobileAdvToggle svg{transition:transform .18s ease;}
+  html:root #settingsTabContent.mobile-adv-open #mobileAdvToggle{color:var(--ink);}
+  html:root #settingsTabContent.mobile-adv-open #mobileAdvToggle svg{transform:rotate(180deg);}
+}

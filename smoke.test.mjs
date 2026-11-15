@@ -67,7 +67,7 @@ const state = (page) => page.evaluate(() => {
   const c = document.getElementById("canvas");
   const r = c.getBoundingClientRect();
   return {
-    names: [...document.querySelectorAll("li.photo-item")].map((li) => (li.textContent.match(/p\d/) || ["?"])[0]),
+    names: [...document.querySelectorAll("li.photo-item")].map((li) => (((li.querySelector(".thumb") || {}).alt || li.textContent).match(/p\d/) || ["?"])[0]),
     canvas: [r.x, r.y, r.width, r.height].map(Math.round).join(","),
     scroll: [Math.round(scrollX), Math.round(scrollY)].join(","),
     sideAdd: !document.getElementById("mobileInsertLeftBtn").hidden && !document.getElementById("mobileInsertRightBtn").hidden,
@@ -120,21 +120,21 @@ try {
       baseline.on("pageerror", e => baselineErrors.push(e.message));
       await baseline.goto(PAGE.replace("/index.html", "/.baseline/index.html"));
       await addPhotos(baseline);
-      const pixels = async p => p.evaluate(() => {
-        const c = document.getElementById("canvas");
-        const data = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
-        let hash = 2166136261;
-        for (let i = 0; i < data.length; i++) hash = Math.imul(hash ^ data[i], 16777619) >>> 0;
-        return { w: c.width, h: c.height, hash };
+      // 축소 화질(imageSmoothingQuality = high)을 의도적으로 바꿔 픽셀 해시는 main과 달라진다.
+      // 대신 합성 크기와 각 칸의 색(배치)이 main과 같은지 확인한다.
+      const layout = async p => ({
+        size: await p.evaluate(() => [document.getElementById("canvas").width, document.getElementById("canvas").height, document.getElementById("dimsReadout").textContent.trim().replace(/\s*\(.*\)$/, "")]),
+        colors: await slotColors(p),
       });
-      const original = await pixels(baseline);
-      const refactored = await pixels(page);
-      check("PC: 원본(main)과 리팩터링 합성 픽셀이 일치한다", JSON.stringify(original) === JSON.stringify(refactored), JSON.stringify({ original, refactored, baselineErrors }));
+      const sameLayout = (a, b) => JSON.stringify(a.size) === JSON.stringify(b.size) && a.colors.every((c, i) => near(c, b.colors[i]));
+      const original = await layout(baseline);
+      const refactored = await layout(page);
+      check("PC: main과 합성 크기·배치가 일치한다", sameLayout(original, refactored), JSON.stringify({ original, refactored, baselineErrors }));
 
-      // 원근 보정 경로를 실제로 실행해 픽셀 단위로 교차 검증한다.
+      // 수평 맞추기(회전) 경로를 실행해 크기·배치를 교차 검증한다. (수직·수평 원근 보정은 제거됨)
       const applyTransform = async p => {
         await p.locator('li.photo-item [data-act="adjust"]').first().click();
-        for (const [id, value] of [["#rotRange", "12"], ["#skewVRange", "22"], ["#skewHRange", "-17"]]) {
+        for (const [id, value] of [["#rotRange", "12"]].filter(([id]) => p === baseline || id !== "#skewVRange")) {
           await p.locator(id).evaluate((el, v) => {
             el.value = v;
             el.dispatchEvent(new Event("input", { bubbles: true }));
@@ -145,9 +145,9 @@ try {
       };
       await applyTransform(baseline);
       await applyTransform(page);
-      const originalWarp = await pixels(baseline);
-      const refactoredWarp = await pixels(page);
-      check("PC: 회전·수직·수평 원근 보정 픽셀이 원본과 일치한다", JSON.stringify(originalWarp) === JSON.stringify(refactoredWarp), JSON.stringify({ originalWarp, refactoredWarp }));
+      const originalWarp = await layout(baseline);
+      const refactoredWarp = await layout(page);
+      check("PC: 수평 맞추기 후 크기·배치가 main과 일치한다", sameLayout(originalWarp, refactoredWarp), JSON.stringify({ originalWarp, refactoredWarp }));
       await baseline.close();
     }
     const pixelBefore = await page.evaluate(() => {
@@ -225,9 +225,19 @@ try {
         for (const byte of data) hash = Math.imul(hash ^ byte, 16777619) >>> 0;
         return { w: c.width, h: c.height, hash };
       });
-      const expectedVertical = await verticalPixels(baselineVertical);
+      // main 대비는 크기·배치로, 설정 반영 여부는 이 버전 안의 픽셀 해시 변화로 확인한다.
+      const vLayout = async p => ({
+        size: await p.evaluate(() => [document.getElementById("canvas").width, document.getElementById("canvas").height, document.getElementById("dimsReadout").textContent.trim().replace(/\s*\(.*\)$/, "")]),
+        colors: await slotColors(p),
+      });
+      const vSame = (a, b) => JSON.stringify(a.size) === JSON.stringify(b.size) && a.colors.every((c, i) => near(c, b.colors[i]));
+      const compare = async (label) => {
+        const expected = await vLayout(baselineVertical);
+        const actual = await vLayout(refactorVertical);
+        check(label, vSame(expected, actual), JSON.stringify({ expected, actual }));
+      };
+      await compare("PC: 세로 합성 크기·배치가 main과 일치한다");
       const actualVertical = await verticalPixels(refactorVertical);
-      check("PC: 세로 합성 픽셀이 원본(main)과 일치한다", JSON.stringify(expectedVertical) === JSON.stringify(actualVertical), JSON.stringify({ expectedVertical, actualVertical }));
 
       // Same input and explicit output/spacing settings must preserve preview pixels.
       const setOutputOptions = async p => {
@@ -237,9 +247,8 @@ try {
       };
       await setOutputOptions(baselineVertical);
       await setOutputOptions(refactorVertical);
-      const expectedPreset = await verticalPixels(baselineVertical);
+      await compare("PC: 출력 1600px·간격 없음 설정 크기·배치가 main과 일치한다");
       const actualPreset = await verticalPixels(refactorVertical);
-      check("PC: 출력 1600px·간격 없음 설정 픽셀이 원본과 일치한다", JSON.stringify(expectedPreset) === JSON.stringify(actualPreset), JSON.stringify({ expectedPreset, actualPreset }));
       // Exercise custom output and wide spacing, not just the default/preset path.
       const setCustomOptions = async p => {
         await p.locator('#outputPills .pill[data-preset="custom"]').evaluate(button => button.click());
@@ -252,9 +261,8 @@ try {
       };
       await setCustomOptions(baselineVertical);
       await setCustomOptions(refactorVertical);
-      const expectedCustom = await verticalPixels(baselineVertical);
+      await compare("PC: 사용자 지정 2300px·넓은 간격 크기·배치가 main과 일치한다");
       const actualCustom = await verticalPixels(refactorVertical);
-      check("PC: 사용자 지정 2300px·넓은 간격 픽셀이 원본과 일치한다", JSON.stringify(expectedCustom) === JSON.stringify(actualCustom), JSON.stringify({ expectedCustom, actualCustom }));
       // Frame-ratio and fit-mode changes are a separate rendering path.
       const setFitOptions = async p => {
         await p.locator('#ratioPills .pill[data-ratio="4:5"]').evaluate(button => button.click());
@@ -264,9 +272,8 @@ try {
       };
       await setFitOptions(baselineVertical);
       await setFitOptions(refactorVertical);
-      const expectedFit = await verticalPixels(baselineVertical);
+      await compare("PC: 4:5 가로형·원본 비율 맞춤 크기·배치가 main과 일치한다");
       const actualFit = await verticalPixels(refactorVertical);
-      check("PC: 4:5 가로형·원본 비율 맞춤 픽셀이 원본과 일치한다", JSON.stringify(expectedFit) === JSON.stringify(actualFit), JSON.stringify({ expectedFit, actualFit }));
       // Check the unconstrained ratio path after switching from a fixed ratio.
       const setFreeRatio = async p => {
         await p.locator('#ratioPills .pill[data-ratio="free"]').evaluate(button => button.click());
@@ -274,9 +281,8 @@ try {
       };
       await setFreeRatio(baselineVertical);
       await setFreeRatio(refactorVertical);
-      const expectedFree = await verticalPixels(baselineVertical);
+      await compare("PC: 자유 비율 전환 후 크기·배치가 main과 일치한다");
       const actualFree = await verticalPixels(refactorVertical);
-      check("PC: 자유 비율 전환 후 픽셀이 원본과 일치한다", JSON.stringify(expectedFree) === JSON.stringify(actualFree), JSON.stringify({ expectedFree, actualFree }));
       // Prevent a false positive where both versions ignore a setting.
       check("PC: 1600px 설정이 실제 합성 결과를 바꾼다", JSON.stringify(actualPreset) !== JSON.stringify(actualVertical), JSON.stringify({ actualVertical, actualPreset }));
       check("PC: 사용자 지정 크기·간격 설정이 실제 합성 결과를 바꾼다", JSON.stringify(actualCustom) !== JSON.stringify(actualPreset), JSON.stringify({ actualPreset, actualCustom }));

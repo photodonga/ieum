@@ -2,7 +2,6 @@
 import * as compositeGeometry from "./composite-geometry.js";
 import * as cropGeometry from "./crop-geometry.js";
 import * as transformMath from "./transform-math.js";
-import * as perspectiveRenderer from "./perspective-renderer.js";
 import * as photoState from "./photo-state.js";
 import * as browserDownload from "./browser-download.js";
 import * as canvasEncoder from "./canvas-encoder.js";
@@ -23,11 +22,6 @@ import * as canvasEncoder from "./canvas-encoder.js";
   // 최종 출력 긴 축에 비례하는 실제 흰 간격.
   // 1600px 출력 기준: 얇게 4px / 보통 8px / 넓게 16px.
   const OUTPUT_GAP_RATIOS = { none: 0, thin: 0.0025, normal: 0.005, wide: 0.01 };
-  function sharpenLevel(v){
-    if (typeof v === 'number') return Math.max(0, Math.min(10, v));
-    // 이전 버전 history/state 호환
-    return ({none:0, light:3, normal:6, strong:10})[v] ?? 0;
-  }
   const EYE_LEVEL = 0.4;
   // Preview/layout coordinate baseline only. Never use this as source resolution.
   const RATIO_BASELINE = 1000;
@@ -90,18 +84,10 @@ import * as canvasEncoder from "./canvas-encoder.js";
     });
   }
 
-  let downloadsNS = null;
-  (async () => {
-    try {
-      if (window.claude && window.claude.use) downloadsNS = await window.claude.use('downloads');
-    } catch (e) { downloadsNS = null; }
-  })();
-
   /* ---------- element refs ---------- */
   const el = (id) => document.getElementById(id);
   const photoList = el('photoList');
   const photoCount = el('photoCount');
-  const dropzone = el('dropzone');
   const fileInput = el('fileInput');
   const previewStage = el('previewStage');
   const canvas = el('canvas');
@@ -143,16 +129,16 @@ import * as canvasEncoder from "./canvas-encoder.js";
 
   /* ---------- undo/redo (whole-app history over photo actions) ----------
      Covers everything that changes the PHOTO list/state: add, remove, reorder,
-     rotate, crop adjustments (zoom/straighten/skew/pan/sharpen), replace, and
+     rotate, crop adjustments (zoom/straighten/pan), replace, and
      clear-all. Deliberately does NOT cover 설정 (ratio/spacing/format/output) —
      those are rendering options, not actions on a photo, and undoing them
      alongside photo edits was the confusing mix that got this feature pulled
-     before. A snapshot is just the `photos` array (id/rotation/crop) — the
-     actual image bytes live forever in `store` keyed by id, so restoring an
-     older snapshot always finds its image (replace hands out a fresh id
-     instead of overwriting the old one, so even "교체" is fully undoable). */
+     before. A snapshot is just the `photos` array (id/rotation/crop). Image
+     bytes live in `store` keyed by id for as long as any snapshot (최근 30단계)
+     or the current list still refers to them — see releaseUnusedImages(). */
   let historyStack = [];
   let historyIndex = -1;
+  const HISTORY_LIMIT = 30;
 
   function snapshotPhotos(){
     return photoState.clonePhotoState(photos);
@@ -166,8 +152,28 @@ import * as canvasEncoder from "./canvas-encoder.js";
     if (historyIndex >= 0 && JSON.stringify(historyStack[historyIndex]) === JSON.stringify(snap)) return;
     historyStack = historyStack.slice(0, historyIndex + 1);
     historyStack.push(snap);
+    if (historyStack.length > HISTORY_LIMIT) historyStack.splice(0, historyStack.length - HISTORY_LIMIT);
     historyIndex = historyStack.length - 1;
     updateHistoryButtons();
+    releaseUnusedImages();
+  }
+
+  // 현재 목록과 실행 취소 기록 어디에도 남지 않은 사진은 디코딩된 원본까지 메모리에서 비운다.
+  // (24MP 한 장이 약 96MB라, 지우거나 교체한 사진이 쌓이면 탭이 금방 무거워진다)
+  function releaseImageRecord(rec){
+    if (!rec) return;
+    if (rec.img && typeof rec.img.close === 'function') { try { rec.img.close(); } catch (_) {} }
+    Object.values(rec.effCache || {}).forEach(v => { if (v && v.img !== rec.img && v.img) v.img.width = v.img.height = 0; });
+    rec.effCache = {};
+  }
+  function releaseUnusedImages(){
+    const alive = new Set(photos.map(p => p.id));
+    historyStack.forEach(snap => snap.forEach(p => alive.add(p.id)));
+    Array.from(store.keys()).forEach(id => {
+      if (alive.has(id)) return;
+      releaseImageRecord(store.get(id));
+      store.delete(id);
+    });
   }
   function restoreSnapshot(snap){
     photos = photoState.clonePhotoState(snap);
@@ -313,9 +319,29 @@ import * as canvasEncoder from "./canvas-encoder.js";
     });
   }
 
-  function addFiles(fileList){
-    const files = Array.from(fileList || []).filter(f => f.type.startsWith('image/'));
+  const IMAGE_NAME_RE = /\.(jpe?g|png|webp|gif|bmp|avif|heic|heif|hif)$/i;
+  function isImageFile(f){
+    return !!f && (((f.type || '').toLowerCase().startsWith('image/')) || IMAGE_NAME_RE.test((f.name || '').trim()));
+  }
+  // 크롬은 HEIC/HEIF(아이폰·캐논 HIF)를 디코딩하지 못한다. 조용히 빠지지 않도록 알려준다.
+  function notifyDecodeFailures(names){
+    if (!names.length) return;
+    const heif = names.filter(n => /\.(heic|heif|hif)$/i.test(n)).length;
+    if (heif === names.length) {
+      showToast(`HEIC·HIF 사진 ${heif}장은 크롬에서 열 수 없어 제외했어요. JPG로 바꿔서 넣어주세요.`, 5200);
+    } else {
+      showToast(`사진 ${names.length}장을 열 수 없어 제외했어요.`, 4200);
+    }
+  }
+
+  // insertAt: 이 위치(목록 순번) 앞에 끼워 넣는다. 생략하면 맨 뒤에 추가.
+  // 기준은 '그 자리에 있던 사진'이라, 디코딩 중에 목록이 바뀌어도 의도한 자리 앞에 들어간다.
+  // 끼워 넣기도 추가와 같은 경로를 써서 실행 취소 기록은 한 번만 남는다.
+  function addFiles(fileList, insertAt){
+    const files = Array.from(fileList || []).filter(isImageFile);
     if (!files.length) return;
+    const failed = [];
+    const anchorId = (insertAt != null && insertAt < photos.length) ? photos[Math.max(0, insertAt)].id : null;
     // 디코딩은 병렬로 하되, 추가는 사용자가 고른 순서대로 한다.
     // (예전에는 먼저 디코딩이 끝난 사진부터 붙어서 순서가 뒤바뀌곤 했다)
     const ready = new Array(files.length);
@@ -326,7 +352,9 @@ import * as canvasEncoder from "./canvas-encoder.js";
         const r = ready[next++];
         if (!r) continue; // 디코딩 실패한 파일은 건너뜀
         store.set(r.id, r.rec);
-        photos.push({ id: r.id, rotation: 0, crop: null });
+        const entry = { id: r.id, rotation: 0, crop: null };
+        const at = anchorId ? photos.findIndex(p => p.id === anchorId) : -1;
+        if (at >= 0) photos.splice(at, 0, entry); else photos.push(entry);
         added = true;
       }
       if (added) {
@@ -340,11 +368,11 @@ import * as canvasEncoder from "./canvas-encoder.js";
       try {
         const decoded = await decodeImageFile(file);
         result = { id: uid(), rec: { img: decoded.img, w: decoded.w, h: decoded.h, name: file.name, thumb: makeThumb(decoded.img, decoded.w, decoded.h), effCache: {} } };
-      } catch (_) { /* 읽을 수 없는 파일은 건너뜀 */ }
+      } catch (_) { failed.push(file.name || ''); }
       ready[i] = result;
       flush();
       loaded++;
-      if (loaded === files.length) pushHistory();
+      if (loaded === files.length) { pushHistory(); notifyDecodeFailures(failed); }
     });
   }
 
@@ -365,6 +393,12 @@ import * as canvasEncoder from "./canvas-encoder.js";
     rotation = ((rotation % 360) + 360) % 360;
     if (!rec.effCache) rec.effCache = {};
     if (rec.effCache[rotation]) return rec.effCache[rotation];
+    // 회전 복사본은 지금 각도 한 장만 둔다. 원본(rec.img)은 그대로라 초기화·실행 취소와 무관하다.
+    Object.keys(rec.effCache).forEach(k => {
+      const v = rec.effCache[k];
+      if (v && v.img !== rec.img && v.img) v.img.width = v.img.height = 0;
+      delete rec.effCache[k];
+    });
     if (rotation === 0) {
       const val = { img: rec.img, w: rec.w, h: rec.h };
       rec.effCache[0] = val;
@@ -383,13 +417,12 @@ import * as canvasEncoder from "./canvas-encoder.js";
     return val;
   }
 
-  function defaultCrop(){ return { z: 1, cx: 0.5, cy: 0.5, rot: 0, skewV: 0, skewH: 0, sharpen: 0 }; }
+  function defaultCrop(){ return { z: 1, cx: 0.5, cy: 0.5, rot: 0 }; }
 
   function isCropAdjusted(crop){
     if (!crop) return false;
     return crop.z > 1.001 || Math.abs(crop.cx - 0.5) > 0.001 || Math.abs(crop.cy - 0.5) > 0.001
-      || Math.abs(crop.rot || 0) > 0.001 || Math.abs(crop.skewV || 0) > 0.001 || Math.abs(crop.skewH || 0) > 0.001
-      || sharpenLevel(crop.sharpen) > 0;
+      || Math.abs(crop.rot || 0) > 0.001;
   }
 
   /* ---------- list rendering ---------- */
@@ -443,7 +476,6 @@ import * as canvasEncoder from "./canvas-encoder.js";
 
   function renderList(){
     photoCount.textContent = photos.length + '장';
-    dropzone.classList.toggle('compact', photos.length > 0);
     photoList.innerHTML = '';
     photos.forEach((p, idx) => {
       const rec = store.get(p.id);
@@ -453,14 +485,13 @@ import * as canvasEncoder from "./canvas-encoder.js";
       li.dataset.id = p.id;
       li.innerHTML = `
         <span class="drag-handle">${ICONS.drag}</span>
-        <div class="thumb-wrap">
-          <img class="thumb" src="${rec.thumb}" alt="" style="${p.rotation ? `transform:rotate(${p.rotation}deg);` : ''}">
+        <div class="thumb-wrap" title="${escapeHtml(rec.name)} · ${rec.w}×${rec.h}px">
+          <img class="thumb" src="${rec.thumb}" alt="${escapeHtml(rec.name)}" style="${p.rotation ? `transform:rotate(${p.rotation}deg);` : ''}">
           ${p.rotation ? `<span class="rot-badge">${p.rotation}°</span>` : ''}
         </div>
-        <span class="photo-name" title="${escapeHtml(rec.name)} · ${rec.w}×${rec.h}px">${escapeHtml(rec.name)}</span>
         <div class="stack-btns">
-          <button data-act="up" ${idx===0?'disabled':''} title="위로">${ICONS.up}</button>
-          <button data-act="down" ${idx===photos.length-1?'disabled':''} title="아래로">${ICONS.down}</button>
+          <button data-act="up" ${idx===0?'disabled':''} title="앞으로">${ICONS.up}</button>
+          <button data-act="down" ${idx===photos.length-1?'disabled':''} title="뒤로">${ICONS.down}</button>
         </div>
         <div class="item-actions">
           <button class="icon-btn${editingId===p.id?' live':(isCropAdjusted(p.crop)?' on':'')}" data-act="adjust" title="확대/위치 조정">${ICONS.adjust}</button>
@@ -678,18 +709,12 @@ import * as canvasEncoder from "./canvas-encoder.js";
 
   const fitModeSeg = el('fitModeSeg');
   const ratioField = el('ratioField');
-  const fitModeHint = el('fitModeHint');
   const outputSizeLabel = el('outputSizeLabel');
 
   function syncFitModeUI(){
     setActiveSeg(fitModeSeg, settings.fitMode);
     const original = settings.fitMode === 'original';
     ratioField.hidden = original;
-    fitModeHint.textContent = original
-      ? (settings.direction === 'vertical'
-          ? '사진을 자르지 않고 원본 비율을 유지한 채 같은 너비로 맞춥니다.'
-          : '사진을 자르지 않고 원본 비율을 유지한 채 같은 높이로 맞춥니다.')
-      : '프레임 비율에 맞춰 사진을 정돈합니다.';
     outputSizeLabel.textContent = original
       ? (settings.direction === 'vertical' ? '출력 크기 (전체 높이 기준)' : '출력 크기 (전체 너비 기준)')
       : '출력 크기 (긴 변 기준)';
@@ -830,8 +855,8 @@ import * as canvasEncoder from "./canvas-encoder.js";
   });
   function updateCommonAutoLabel(){
     el('commonAutoLabel').textContent = settings.direction === 'vertical'
-      ? '기준 폭 자동 계산 (사진들의 중간값)'
-      : '기준 높이 자동 계산 (사진들의 중간값)';
+      ? '기준 폭'
+      : '기준 높이';
   }
 
   function median(arr){
@@ -856,66 +881,26 @@ import * as canvasEncoder from "./canvas-encoder.js";
 
   /* fine straighten (rot), applied as a cosmetic transform on top of the already-cropped
      window, with automatic overscale so the rotated content still fully covers the
-     destination slot (no gaps at corners). 수직/수평 (skewV/skewH) used to be baked into
-     this same matrix as a simple shear, but a shear can only ever TILT straight lines —
-     it can't converge or diverge them, so it never behaved like a real perspective/
-     keystone correction (see drawPerspectiveMesh below for the real thing). */
+     destination slot (no gaps at corners). */
   function rotMatrix(rotDeg){ return transformMath.rotMatrix(rotDeg, clamp); }
   function computeOverscale(a,b,c,d,W,H){ return transformMath.computeOverscale(a,b,c,d,W,H); }
-  const MAX_KEYSTONE = 0.5;
-  function solveAffine3(S,D){ return transformMath.solveAffine3(S,D); }
 
-  function drawPerspectiveMesh(ctx, img, win, skewV, skewH, destW, destH, gridN){
-    return perspectiveRenderer.drawPerspectiveMesh(ctx, img, win, skewV, skewH, destW, destH, gridN, clamp, MAX_KEYSTONE, solveAffine3);
-  }
-
-  function drawSlot(ctx, img, win, dx, dy, destW, destH, crop, live){
-    const rot = crop.rot || 0, skewV = crop.skewV || 0, skewH = crop.skewH || 0;
-    if (!rot && !skewV && !skewH) {
+  function drawSlot(ctx, img, win, dx, dy, destW, destH, crop){
+    const rot = crop.rot || 0;
+    if (!rot) {
       ctx.drawImage(img, win.srcX, win.srcY, win.winW, win.winH, dx, dy, destW, destH);
       return;
     }
-    if (!skewV && !skewH) {
-      // rotation only -- the old, cheap, exact single-drawImage path still applies
-      const { a, b, c, d } = rotMatrix(rot);
-      const s = computeOverscale(a, b, c, d, destW, destH);
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(dx, dy, destW, destH);
-      ctx.clip();
-      ctx.translate(dx + destW / 2, dy + destH / 2);
-      ctx.transform(a, c, b, d, 0, 0);
-      ctx.scale(s, s);
-      ctx.drawImage(img, win.srcX, win.srcY, win.winW, win.winH, -destW / 2, -destH / 2, destW, destH);
-      ctx.restore();
-      return;
-    }
+    const { a, b, c, d } = rotMatrix(rot);
+    const s = computeOverscale(a, b, c, d, destW, destH);
     ctx.save();
     ctx.beginPath();
     ctx.rect(dx, dy, destW, destH);
     ctx.clip();
     ctx.translate(dx + destW / 2, dy + destH / 2);
-    // rot is applied as a plain canvas rotation on top of the mesh, same as the
-    // rotation-only path above -- but the mesh itself still only paints an axis-aligned
-    // destW x destH rectangle, so once THAT gets rotated, its corners swing outside the
-    // (unrotated) clip rect while the clip rect's own corners go uncovered, leaving white
-    // triangular gaps. Same fix as the rotation-only path: overscale so the rotated
-    // content still fully covers the clip -- just applied to the mesh's destination size
-    // instead of a single drawImage call.
-    let meshW = destW, meshH = destH;
-    if (rot) {
-      const { a, b, c, d } = rotMatrix(rot);
-      // computeOverscale returns the minimum scale that makes the rotated rectangle's
-      // edges exactly touch the clip rect's corners -- with the mesh built from many
-      // separately-clipped triangles (vs. one drawImage call in the rotation-only path),
-      // that exact tangency leaves a sub-pixel gap at the seam some of the time. A small
-      // safety margin closes it; it's far too small to read as extra zoom.
-      const s = computeOverscale(a, b, c, d, destW, destH) * 1.02;
-      ctx.rotate(rot * Math.PI / 180);
-      meshW = destW * s;
-      meshH = destH * s;
-    }
-    drawPerspectiveMesh(ctx, img, win, skewV, skewH, meshW, meshH, live ? 6 : 16);
+    ctx.transform(a, c, b, d, 0, 0);
+    ctx.scale(s, s);
+    ctx.drawImage(img, win.srcX, win.srcY, win.winW, win.winH, -destW / 2, -destH / 2, destW, destH);
     ctx.restore();
   }
 
@@ -968,8 +953,23 @@ import * as canvasEncoder from "./canvas-encoder.js";
     return { items, commonSize };
   }
 
+  // 결과물 긴 변 상한. 통신사 원본(긴 변 4,500px 안팎) 3장을 이어도 원본 그대로 저장되고,
+  // 그보다 커지면 비율을 유지한 채 긴 변을 이 값에 맞춰 줄인다. 크롬 캔버스 한도
+  // (약 2.68억 화소)에 닿아 저장이 조용히 실패하던 문제도 이것으로 막는다.
+  const MAX_OUTPUT_LONG_EDGE = 15000;
   function resolveCompositeGeometry(items, commonSize){
-    return compositeGeometry.resolveCompositeGeometry(items, commonSize, settings, computeCropWindow, OUTPUT_GAP_RATIOS);
+    const g = compositeGeometry.resolveCompositeGeometry(items, commonSize, settings, computeCropWindow, OUTPUT_GAP_RATIOS);
+    const longest = Math.max(g.finalLong, g.finalCross);
+    if (longest <= MAX_OUTPUT_LONG_EDGE) return { ...g, capped: false };
+    // spacing은 내부 좌표계 값이라 그대로 두고 scale만 줄이면 간격 비율도 함께 유지된다.
+    const k = MAX_OUTPUT_LONG_EDGE / longest;
+    return {
+      ...g,
+      finalScale: g.finalScale * k,
+      finalLong: Math.max(1, Math.min(MAX_OUTPUT_LONG_EDGE, Math.round(g.finalLong * k))),
+      finalCross: Math.max(1, Math.min(MAX_OUTPUT_LONG_EDGE, Math.round(g.finalCross * k))),
+      capped: true,
+    };
   }
 
   function prepareCompositeCanvas(finalLong, finalCross){
@@ -987,10 +987,13 @@ import * as canvasEncoder from "./canvas-encoder.js";
 
   function drawCompositeItems(ctx, items, geometry, live, slotsOut = lastSlots){
     const { spacing, finalScale } = geometry;
+    // 크게 줄여 그릴 때 계단 현상을 막는다. 드래그 중(live)에는 속도를 위해 기본 품질.
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = live ? 'low' : 'high';
     let cursor = 0;
     items.forEach((it, idx) => {
       const cropForRender = settings.fitMode === 'original'
-        ? { ...it.p.crop, z:1, cx:.5, cy:.5, rot:0, skewV:0, skewH:0 }
+        ? { ...it.p.crop, z:1, cx:.5, cy:.5, rot:0 }
         : it.p.crop;
       const win = computeCropWindow(it.eff, it.AR, cropForRender);
       if (settings.fitMode !== 'original') {
@@ -1002,7 +1005,7 @@ import * as canvasEncoder from "./canvas-encoder.js";
       let dx, dy;
       if (settings.direction === 'vertical') { dx = 0; dy = pos; }
       else { dx = pos; dy = 0; }
-      drawSlot(ctx, it.eff.img, win, dx, dy, destW, destH, settings.fitMode === 'original' ? defaultCrop() : it.p.crop, live);
+      drawSlot(ctx, it.eff.img, win, dx, dy, destW, destH, settings.fitMode === 'original' ? defaultCrop() : it.p.crop);
       slotsOut.push({ id: it.p.id, x: dx, y: dy, w: destW, h: destH });
       cursor += it.slotLong + (idx < items.length - 1 ? spacing : 0);
     });
@@ -1010,7 +1013,8 @@ import * as canvasEncoder from "./canvas-encoder.js";
 
   function updateRenderedPreview(ctx, geometry, live){
     if (!live) {
-      dimsReadout.textContent = lastRender.full.w + ' × ' + lastRender.full.h + ' px';
+      dimsReadout.textContent = lastRender.full.w + ' × ' + lastRender.full.h + ' px' + (lastRender.capped ? ' (긴 변 상한)' : '');
+      dimsReadout.title = lastRender.capped ? '결과물이 너무 커서 긴 변을 15,000px에 맞춰 줄였어요' : '';
       scheduleSizeEstimate();
       applyPreviewZoom();
     }
@@ -1046,7 +1050,7 @@ import * as canvasEncoder from "./canvas-encoder.js";
       finalLong: Math.max(1, Math.round(geometry.finalLong * ps)),
       finalCross: Math.max(1, Math.round(geometry.finalCross * ps)),
     };
-    lastRender = { full };
+    lastRender = { full, capped: !!geometry.capped };
     const ctx = prepareCompositeCanvas(previewGeometry.finalLong, previewGeometry.finalCross);
     drawCompositeItems(ctx, items, previewGeometry, live);
     updateRenderedPreview(ctx, previewGeometry, live);
@@ -1054,7 +1058,7 @@ import * as canvasEncoder from "./canvas-encoder.js";
   }
 
   /* ---------- preview resolution vs. output resolution ---------- */
-  let lastRender = { full: { w: 0, h: 0 } };
+  let lastRender = { full: { w: 0, h: 0 }, capped: false };
   let lastPreviewTargetW = 0;
   function fullDimsOf(geometry){
     return settings.direction === 'vertical'
@@ -1067,10 +1071,12 @@ import * as canvasEncoder from "./canvas-encoder.js";
     const dpr = Math.min(3, window.devicePixelRatio || 1);
     return Math.max(1200, Math.ceil(window.innerWidth * dpr));
   }
+  let lastExportCapped = false;
   // 저장용: 원본 해상도로 새 캔버스에 그린다 (화면의 미리보기 캔버스는 건드리지 않음).
   function renderFullResolution(){
     const { items, commonSize } = buildRenderItems();
     const geometry = resolveCompositeGeometry(items, commonSize);
+    lastExportCapped = !!geometry.capped;
     const full = fullDimsOf(geometry);
     const out = document.createElement('canvas');
     out.width = full.w; out.height = full.h;
@@ -1180,31 +1186,7 @@ import * as canvasEncoder from "./canvas-encoder.js";
   }
 
   function insertFilesAt(fileList,index){
-    const files=Array.from(fileList||[]);
-    if(!files.length)return;
-    // Reuse existing decoder/addFiles, but capture newly appended photo records and splice
-    // them into the requested order after decoding. This keeps all existing image handling.
-    const beforeIds=new Set(photos.map(p=>p.id));
-    addFiles(files);
-    let tries=0;
-    const settle=()=>{
-      const added=photos.filter(p=>!beforeIds.has(p.id));
-      if(added.length>=files.length || tries++>80){
-        if(added.length){
-          const addedIds=new Set(added.map(p=>p.id));
-          const base=photos.filter(p=>!addedIds.has(p.id));
-          base.splice(Math.max(0,Math.min(index,base.length)),0,...added);
-          photos.splice(0,photos.length,...base);
-          renderList();
-          if(settings.commonAuto)recomputeCommonSize();
-          scheduleRender();
-          pushHistory();
-        }
-        return;
-      }
-      setTimeout(settle,25);
-    };
-    setTimeout(settle,25);
+    addFiles(fileList, index);
   }
 
 
@@ -1253,10 +1235,7 @@ import * as canvasEncoder from "./canvas-encoder.js";
     return Array.from(dt.types||[]).includes('Files') || !!(dt.files&&dt.files.length);
   }
   function droppedImageFiles(dt){
-    return Array.from((dt&&dt.files)||[]).filter(f =>
-      f && (((f.type||'').toLowerCase().startsWith('image/')) ||
-      /\.(jpe?g|png|webp|gif|bmp|avif|heic|heif)$/i.test((f.name||'').trim()))
-    );
+    return Array.from((dt&&dt.files)||[]).filter(isImageFile);
   }
   function pointToSlot(clientX,clientY){
     if(canvas.hidden||!canvas.width||!canvas.height||!lastSlots.length)return null;
@@ -1287,7 +1266,7 @@ import * as canvasEncoder from "./canvas-encoder.js";
       renderList();
       if(settings.commonAuto)recomputeCommonSize();
       scheduleRender(); pushHistory();
-    } catch (_) {}
+    } catch (_) { notifyDecodeFailures([file.name || '']); }
   }
 
   function pointInsidePreview(clientX,clientY){
@@ -1425,10 +1404,6 @@ import * as canvasEncoder from "./canvas-encoder.js";
   const zoomVal = el('zoomVal');
   const rotRange = el('rotRange');
   const rotVal = el('rotVal');
-  const skewVRange = el('skewVRange');
-  const skewVVal = el('skewVVal');
-  const skewHRange = el('skewHRange');
-  const skewHVal = el('skewHVal');
   const replacePhotoBtn = el('replacePhotoBtn');
   const resetPhotoBtn = el('resetPhotoBtn');
   const replaceInput = el('replaceInput');
@@ -1483,10 +1458,6 @@ import * as canvasEncoder from "./canvas-encoder.js";
     const c = entry.crop;
     rotRange.value = -(c.rot || 0);
     rotVal.textContent = Math.round(-(c.rot || 0)) + '°';
-    skewVRange.value = c.skewV || 0;
-    skewVVal.textContent = Math.round(c.skewV || 0);
-    skewHRange.value = c.skewH || 0;
-    skewHVal.textContent = Math.round(c.skewH || 0);
   }
 
   function enterEdit(id){
@@ -1625,26 +1596,6 @@ import * as canvasEncoder from "./canvas-encoder.js";
     renderLive();
   });
   rotRange.addEventListener('change', commitCrop);
-  skewVRange.addEventListener('input', () => {
-    if (!editingId) return;
-    const entry = photos.find(p => p.id === editingId);
-    if (!entry) return;
-    if (!entry.crop) entry.crop = defaultCrop();
-    entry.crop.skewV = Number(skewVRange.value);
-    skewVVal.textContent = skewVRange.value;
-    renderLive();
-  });
-  skewVRange.addEventListener('change', commitCrop);
-  skewHRange.addEventListener('input', () => {
-    if (!editingId) return;
-    const entry = photos.find(p => p.id === editingId);
-    if (!entry) return;
-    if (!entry.crop) entry.crop = defaultCrop();
-    entry.crop.skewH = Number(skewHRange.value);
-    skewHVal.textContent = skewHRange.value;
-    renderLive();
-  });
-  skewHRange.addEventListener('change', commitCrop);
   resetPhotoBtn.addEventListener('click', () => {
     if (!editingId) return;
     const entry = photos.find(p => p.id === editingId);
@@ -1662,11 +1613,11 @@ import * as canvasEncoder from "./canvas-encoder.js";
   replaceInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     replaceInput.value = '';
-    if (!file || !file.type.startsWith('image/') || !editingId) return;
+    if (!file || !isImageFile(file) || !editingId) return;
     const oldId = editingId;
     try {
       const decoded = await decodeImageFile(file);
-      // a fresh id (not overwriting oldId's store entry) so undo can still restore it
+      // 새 id로 저장해 교체 전 사진도 실행 취소로 되살릴 수 있게 한다 (기록에서 빠지면 정리됨)
       const newId = uid();
       store.set(newId, { img: decoded.img, w: decoded.w, h: decoded.h, name: file.name, thumb: makeThumb(decoded.img, decoded.w, decoded.h), effCache: {} });
       const idx = photos.findIndex(p => p.id === oldId);
@@ -1679,7 +1630,7 @@ import * as canvasEncoder from "./canvas-encoder.js";
       renderNow();
       syncAdjustPanel();
       pushHistory();
-    } catch (_) {}
+    } catch (_) { notifyDecodeFailures([file.name || '']); }
   });
 
   /* ---------- global eye-level guide (one line across the whole composite) ---------- */
@@ -1977,14 +1928,10 @@ import * as canvasEncoder from "./canvas-encoder.js";
     if(!editingId) return false;
     const idx=photos.findIndex(p=>p.id===editingId);
     if(idx<0) return false;
-    const removedId=editingId;
     // Tear down the edit UI BEFORE removing the selected photo.
     // Otherwise the overlay can survive one render with stale geometry after Delete/Backspace.
     exitEdit();
     photos.splice(idx,1);
-    if(store.has(removedId) && !photos.some(p=>p.id===removedId)) {
-      // Keep store bytes available for undo/history, matching existing removal behavior.
-    }
     if(settings.commonAuto) recomputeCommonSize();
     renderList();
     renderNow();
@@ -2042,19 +1989,6 @@ import * as canvasEncoder from "./canvas-encoder.js";
       photos.map(p => p.id + ':' + p.rotation + ':' + JSON.stringify(p.crop)).join(',');
   }
   async function finishWithDownloads(blob, filename){
-    if (!downloadsNS) {
-      try { if (window.claude && window.claude.use) downloadsNS = await window.claude.use('downloads'); } catch(e) {}
-    }
-    if (downloadsNS) {
-      try {
-        await downloadsNS.save({ filename, data: blob });
-      } catch (err) {
-        if (err && err.code === 'declined') return;
-        showToast('저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
-      }
-      return;
-    }
-    // Regular browser fallback when no host download bridge is available.
     try {
       browserDownload.downloadBlob(blob, filename, { document, URL, setTimeout });
     } catch (err) {
@@ -2100,11 +2034,12 @@ import * as canvasEncoder from "./canvas-encoder.js";
       exportBtn.disabled = false;
       exportLabel.textContent = prevLabel;
       outCanvas.width = outCanvas.height = 0; // 큰 캔버스 메모리 바로 반납
-      if (!blob) return;
+      if (!blob) { showToast('저장 파일을 만들지 못했어요. 고급 설정에서 출력 크기를 줄여 다시 시도해 주세요.', 5000); return; }
       sizeReadout.textContent = formatBytes(blob.size);
+      if (lastExportCapped) showToast('결과물이 너무 커서 긴 변을 15,000px에 맞춰 저장했어요.', 4200);
       const stamp = new Date();
       const pad = n => String(n).padStart(2,'0');
-      const filename = `photojoin_${stamp.getFullYear()}${pad(stamp.getMonth()+1)}${pad(stamp.getDate())}_${pad(stamp.getHours())}${pad(stamp.getMinutes())}.${ext}`;
+      const filename = `ieum_${stamp.getFullYear()}${pad(stamp.getMonth()+1)}${pad(stamp.getDate())}_${pad(stamp.getHours())}${pad(stamp.getMinutes())}${pad(stamp.getSeconds())}.${ext}`;
       const file = new File([blob], filename, { type: mime });
 
       if (canShareFiles && navigator.canShare({ files: [file] })) {
@@ -2154,24 +2089,39 @@ import * as canvasEncoder from "./canvas-encoder.js";
     // whole page made that unrelated height look like "content below the preview", so the
     // gray preview stage shrank every time the photo list/settings grew.
     // Measure ONLY the preview column's own fixed chrome below the stage instead.
-    const privacy = previewPanel.querySelector('.privacy-note');
-    const tail = privacy || previewPanel.querySelector('.shortcut-note') || previewPanel.querySelector('.export-row');
-    const tailRect = tail ? tail.getBoundingClientRect() : stageRect;
+    // 저작권 줄은 margin-top:auto로 패널 바닥에 붙어 있어서 그 '위치'를 재면 남는 틈까지
+    // 아래 내용으로 잘못 세어 미리보기가 계속 줄어든다. 고정된 높이(저장 줄·저작권 줄)만 더한다.
+    const bar = previewPanel.querySelector('.preview-bottom-bar');
+    const footer = previewPanel.querySelector('.app-footer');
     const panelStyle = getComputedStyle(previewPanel);
-    const panelBottomPad = parseFloat(panelStyle.paddingBottom) || 0;
-    const contentBelow = Math.max(0, tailRect.bottom - stageRect.bottom) + panelBottomPad;
+    const panelBottomPad = (parseFloat(panelStyle.paddingBottom) || 0) + (parseFloat(panelStyle.borderBottomWidth) || 0);
+    let contentBelow = panelBottomPad;
+    if (bar) {
+      const bs = getComputedStyle(bar);
+      contentBelow += (bar.getBoundingClientRect().bottom - stageRect.bottom) + (parseFloat(bs.marginBottom) || 0);
+    }
+    if (footer) contentBelow += footer.getBoundingClientRect().height;
 
     // Reserve only the page's normal bottom breathing room. This value is independent of
     // the photo count and the height of the left column, so Fit stays visually stable.
-    const safety = 8;
+    // 페이지 아래 여백만큼 비워 두어 문서 전체가 정확히 화면 높이에 들어오게 한다.
+    const safety = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--page-bottom')) + 2 || 26; // +2: 테두리·반올림 오차
     // 문서 기준 위치로 계산해야 스크롤 위치에 따라 미리보기 크기가 달라지지 않는다.
     const stageTop = stageRect.top + window.scrollY;
     const available = Math.floor(window.innerHeight - stageTop - contentBelow - safety);
 
     // Keep the drop target usable on short windows, but otherwise consume all
     // available space. No device-specific Mac/iPad/Windows breakpoints.
-    const fitted = Math.max(220, available);
+    // -2: 아래 구분선이 왼쪽 칸과 정확히 같은 높이에 오도록 반올림 여유를 둔다
+    const fitted = Math.max(220, available - 2);
     document.documentElement.style.setProperty('--preview-fit-height', fitted + 'px');
+    // 왼쪽 칸(설정+사진 순서)도 같은 화면 높이 안에 묶는다. 고급 설정을 펼쳐도
+    // 사진 순서가 화면 밖으로 밀려나지 않고, 설정 쪽이 안에서 스크롤된다.
+    const grid = document.querySelector('.grid');
+    if (grid) {
+      const gridTop = grid.getBoundingClientRect().top + window.scrollY;
+      document.documentElement.style.setProperty('--grid-fit-height', Math.max(320, Math.floor(window.innerHeight - gridTop - safety)) + 'px');
+    }
 
     requestAnimationFrame(() => {
       applyPreviewZoom();
@@ -2208,49 +2158,138 @@ import * as canvasEncoder from "./canvas-encoder.js";
     window.visualViewport.addEventListener('resize', handleLayoutChange, {passive:true});
   }
 
+  /* ---------- 설정 기억 ----------
+     방향·비율·간격·형식·출력 크기는 다음에 열 때도 그대로 둔다. 확장 프로그램 자신의
+     localStorage를 쓰므로 storage 권한이 필요 없다. 사진은 저장하지 않는다. */
+  const SETTINGS_KEY = 'ieum.settings.v1';
+  const PERSISTED_KEYS = ['direction','fitMode','ratio','ratioOrientation','customRatioW','customRatioH',
+    'spacingMode','format','outputMode','outputPreset','outputCustom'];
+  function persistedSettings(){
+    const o = {};
+    PERSISTED_KEYS.forEach(k => { o[k] = settings[k]; });
+    o.ratioTouchedByUser = ratioTouchedByUser;
+    return o;
+  }
+  function saveSettings(){
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(persistedSettings())); } catch (_) {}
+  }
+  function loadSettings(){
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); } catch (_) { saved = null; }
+    if (!saved || typeof saved !== 'object') return;
+    const allowed = {
+      direction: ['horizontal','vertical'], fitMode: ['frame','original'],
+      ratio: ['free','1:1','4:5','3:4','2:3','custom'], ratioOrientation: ['portrait','landscape'],
+      spacingMode: ['none','thin','normal','wide'], format: ['jpeg','png'],
+      outputMode: ['original','preset','custom'],
+    };
+    Object.keys(allowed).forEach(k => { if (allowed[k].includes(saved[k])) settings[k] = saved[k]; });
+    [['customRatioW',1,20000],['customRatioH',1,20000],['outputPreset',200,6000],['outputCustom',200,6000]].forEach(([k,lo,hi]) => {
+      const v = Number(saved[k]);
+      if (Number.isFinite(v) && v >= lo && v <= hi) settings[k] = v;
+    });
+    ratioTouchedByUser = !!saved.ratioTouchedByUser;
+  }
+  function applySettingsToUI(){
+    setActiveSeg(el('directionSeg'), settings.direction);
+    document.querySelectorAll('#ratioPills .pill').forEach(p => p.classList.toggle('active', p.dataset.ratio === settings.ratio));
+    setActiveSeg(el('ratioOrientSeg'), settings.ratioOrientation);
+    refreshRatioPillLabels();
+    ratioCustomW.value = settings.customRatioW;
+    ratioCustomH.value = settings.customRatioH;
+    document.querySelectorAll('#spacingPills .pill').forEach(p => p.classList.toggle('active', p.dataset.spacing === settings.spacingMode));
+    setActiveSeg(el('formatSeg'), settings.format);
+    if (window.__ieumSyncFormatPills) window.__ieumSyncFormatPills();
+    exportLabel.textContent = (settings.format === 'jpeg' ? 'JPG' : 'PNG') + '로 저장';
+    const presetKey = settings.outputMode === 'original' ? 'original'
+      : settings.outputMode === 'custom' ? 'custom' : String(settings.outputPreset);
+    document.querySelectorAll('#outputPills .pill').forEach(p => p.classList.toggle('active', p.dataset.preset === presetKey));
+    outputCustomInput.hidden = settings.outputMode !== 'custom';
+    outputCustomInput.value = settings.outputCustom;
+    syncFitModeUI();
+    syncAdvancedState();
+  }
+  // 설정 패널에서 무엇이든 바뀌면 (각 핸들러가 settings를 고친 뒤) 저장한다.
+  ['click','input','change'].forEach(type => {
+    el('controlsCol').addEventListener(type, () => setTimeout(saveSettings, 0));
+  });
+
+  /* ---------- 설정 패널 안에서 [기본 | 고급] 전환 ----------
+     고급 설정을 아래로 펼치거나 위에 띄우지 않고, 같은 패널 안에서 내용만 바꾼다.
+     두 내용을 같은 자리에 겹쳐 두어 패널 높이는 둘 중 큰 쪽으로 고정 → 사진 순서 칸이
+     항상 같은 크기로 보이고, 전환해도 화면이 흔들리지 않는다. */
+  const advancedDetails = el('advancedDetails');
+  const settingsContent = el('settingsTabContent');
+  const basicWrap = document.createElement('div');
+  basicWrap.className = 'settings-pane settings-basic';
+  Array.from(settingsContent.children).forEach(ch => { if (ch !== advancedDetails) basicWrap.appendChild(ch); });
+  const advWrap = document.createElement('div');
+  advWrap.className = 'settings-pane settings-adv';
+  Array.from(advancedDetails.children).forEach(ch => { if (ch.tagName !== 'SUMMARY') advWrap.appendChild(ch); });
+  settingsContent.insertBefore(basicWrap, advancedDetails);
+  settingsContent.insertBefore(advWrap, advancedDetails);
+  advancedDetails.hidden = true;
+  // 기본과 고급의 줄이 같은 높이에 오도록 같은 짜임으로 맞춘다:
+  //   1줄 방향 ↔ 맞춤 방식 (꽉 찬 버튼)   2줄 비율 ↔ 출력 크기 (알약 두 줄)
+  //   3줄 간격 ↔ 파일 형식 (알약 한 줄)   4줄 (고급만) 기준 높이
+  // 파일 형식은 간격처럼 알약 버튼으로 바꿔 보여 준다 (원래 버튼은 숨기고 그대로 연동).
+  (() => {
+    const formatSeg = el('formatSeg');
+    const pills = document.createElement('div');
+    pills.className = 'pillrow';
+    pills.id = 'formatPills';
+    pills.innerHTML = '<button type="button" class="pill" data-val="jpeg">JPG</button><button type="button" class="pill" data-val="png">PNG</button>';
+    formatSeg.after(pills);
+    formatSeg.hidden = true;
+    const sync = () => pills.querySelectorAll('.pill').forEach(b => b.classList.toggle('active', b.dataset.val === settings.format));
+    pills.addEventListener('click', (e) => {
+      const b = e.target.closest('.pill'); if (!b) return;
+      formatSeg.querySelector(`button[data-val="${b.dataset.val}"]`).click();
+      sync();
+    });
+    formatSeg.addEventListener('click', () => setTimeout(sync, 0));
+    window.__ieumSyncFormatPills = sync;
+    sync();
+  })();
+  // 기준 높이(자유 비율일 때 쓰는 값)는 맞춤 방식 줄 오른쪽에 작게 붙여 고급도 세 줄로 끝나게 한다
+  (() => {
+    const advBody = advWrap.querySelector('.adv-body');
+    const fitLabel = el('fitModeSeg').closest('.field').querySelector('.field-label');
+    if (advBody && fitLabel) { advBody.classList.add('adv-body-inline'); fitLabel.appendChild(advBody); }
+  })();
+  const modeSeg = document.createElement('div');
+  modeSeg.className = 'seg seg-sm';
+  modeSeg.id = 'settingsModeSeg';
+  modeSeg.innerHTML = '<button type="button" class="active" data-mode="basic">기본</button><button type="button" data-mode="adv">고급</button>';
+  el('controlTabs').appendChild(modeSeg);
+  function setSettingsMode(mode){
+    settingsContent.classList.toggle('mode-adv', mode === 'adv');
+    modeSeg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  }
+  modeSeg.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-mode]');
+    if (b) setSettingsMode(b.dataset.mode);
+  });
+  // 휴대폰: [기본|고급] 대신 기본 설정 아래에 '고급 설정'을 펼쳐 연다.
+  const advToggle = document.createElement('button');
+  advToggle.type = 'button';
+  advToggle.id = 'mobileAdvToggle';
+  advToggle.setAttribute('aria-expanded', 'false');
+  advToggle.innerHTML = '<span>고급 설정</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+  settingsContent.insertBefore(advToggle, advWrap);
+  advToggle.addEventListener('click', () => {
+    const open = !settingsContent.classList.contains('mobile-adv-open');
+    settingsContent.classList.toggle('mobile-adv-open', open);
+    advToggle.setAttribute('aria-expanded', String(open));
+  });
+
   /* ---------- init ---------- */
+  loadSettings();
+  applySettingsToUI();
   updateCommonAutoLabel();
   ratioCustomRow.hidden = settings.ratio !== 'custom';
   ratioCustomHint.hidden = settings.ratio !== 'custom';
   renderComposite();
   pushHistory(); // baseline (empty) state so the very first add can be undone back to nothing
   requestAnimationFrame(handleLayoutChange);
-
-  if (window.claude && window.claude.hot) {
-    window.claude.hot.ready ? window.claude.hot.ready(() => {}) : null;
-  }
 })();
-
-
-  // 왼쪽 사진 추가 영역은 '클릭해서 열기' 전용.
-  // 왼쪽 목록 내부의 기존 사진 드래그 정렬은 건드리지 않는다.
-  (function(){
-    const dz=document.getElementById('dropzone');
-    if(!dz)return;
-
-    // 안내 문구가 있다면 드래그 관련 표현을 제거하고 클릭 중심으로 바꾼다.
-    const walker=document.createTreeWalker(dz,NodeFilter.SHOW_TEXT);
-    const nodes=[];
-    while(walker.nextNode())nodes.push(walker.currentNode);
-    nodes.forEach(n=>{
-      n.nodeValue=n.nodeValue
-        .replace(/드래그\s*(?:하거나|또는|&|·)?\s*/g,'')
-        .replace(/여기에\s*놓으세요/g,'클릭해서 사진 열기');
-    });
-
-    // OS 파일을 왼쪽 추가 영역에 놓아도 사진을 추가하지 않는다.
-    // stopImmediatePropagation으로 기존 dropzone의 drop 핸들러까지 막는다.
-    ['dragenter','dragover','drop'].forEach(type=>{
-      dz.addEventListener(type,e=>{
-        const dt=e.dataTransfer;
-        const isFiles=dt && (Array.from(dt.types||[]).includes('Files') || (dt.files&&dt.files.length));
-        if(!isFiles)return;
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        if(type==='dragover' && dt)dt.dropEffect='none';
-      },true);
-    });
-  })();
-
-
-
