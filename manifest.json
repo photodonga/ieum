@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "이음 | 사진 이어붙이기",
+  "version": "0.1.0",
+  "description": "여러 장의 사진을 가로 또는 세로로 이어 하나의 JPG/PNG로 저장합니다. 브라우저에서 로컬 처리됩니다.",
+  "action": {
+    "default_title": "이음 열기"
+  },
+  "background": {
+    "service_worker": "extension-background.js"
+  }
+}
