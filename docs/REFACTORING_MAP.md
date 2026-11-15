@@ -10,7 +10,7 @@
 3. 합성 배치·출력 크기 계산: `src/composite-geometry.js`.
 4. 사진 크롭 윈도우 계산: `src/crop-geometry.js`.
 5. 회전 행렬·오버스케일·아핀 행렬 계산: `src/transform-math.js`.
-6. 원근 보정 메시 그리기: `src/perspective-renderer.js`.
+6. (제거됨) 원근 보정 메시 그리기 — 2026-11 개편에서 기능 삭제.
 7. 사진 편집 이력 스냅샷 복제: `src/photo-state.js`.
 8. Canvas JPEG/PNG 인코딩 호출: `src/canvas-encoder.js`.
 9. 브라우저 Blob 다운로드 폴백: `src/browser-download.js`.
@@ -33,7 +33,7 @@
 | 사진 디코딩/썸네일 | `decodeImageFile`, `makeThumb` | ImageBitmap/Image 폴백 |
 | 사진 목록/이력 | `addFiles`, `snapshotPhotos`, `pushHistory`, `restoreSnapshot` | store 및 photos 상태 공유 |
 | 이미지 회전/크롭 | `getEffectiveImage` (`app.js`), `computeCropWindow` (`crop-geometry.js`) | 이미지 캐시와 편집 상태 공유 |
-| 원근/변형 렌더링 | `solveAffine3` (`transform-math.js`), `drawPerspectiveMesh` (`perspective-renderer.js`), `drawSlot` (`app.js`) | 캔버스 좌표·설정 결합 |
+| 회전 렌더링 | `drawSlot` (`app.js`) | 캔버스 좌표·설정 결합 |
 | 합성 배치 | `buildRenderItems` (`app.js`), `resolveOutputScale`, `resolveCompositeGeometry` (`composite-geometry.js`) | settings, photos, store 의존 |
 | 미리보기 | `renderComposite`, `prepareCompositeCanvas` | DOM, 렌더링 상태 의존 |
 | 원본 출력 | `renderFullResolution`, `drawCompositeItems` | 합성 배치/렌더 함수 재사용 |

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { rotMatrix, computeOverscale, solveAffine3 } from "../src/transform-math.js";
+import { rotMatrix, computeOverscale } from "../src/transform-math.js";
 import { computeCropWindow } from "../src/crop-geometry.js";
 import { clonePhotoState } from "../src/photo-state.js";
 import { downloadBlob } from "../src/browser-download.js";
@@ -18,15 +18,6 @@ test("rotation clamps to ±45°", () => {
 
 test("overscale is one for an identity transform", () => {
   assert.equal(computeOverscale(1, 0, 0, 1, 800, 600), 1);
-});
-
-test("affine transform maps a translated triangle", () => {
-  const m = solveAffine3([[0, 0], [1, 0], [0, 1]], [[10, 20], [12, 20], [10, 23]]);
-  assert.deepEqual(m, [2, 0, 0, 3, 10, 20]);
-});
-
-test("degenerate triangle has no affine transform", () => {
-  assert.equal(solveAffine3([[0, 0], [1, 1], [2, 2]], [[0, 0], [1, 0], [0, 1]]), null);
 });
 
 test("crop window preserves requested aspect ratio", () => {

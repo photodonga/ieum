@@ -5,8 +5,8 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" name="viewport"/>
 <title>이음</title>
-<!-- desktop settings heading -->
-<!-- settings-first desktop layout -->
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/icon32.png"/>
+<link rel="apple-touch-icon" href="./icons/icon128.png"/>
 </head>
 <body>
 <link rel="stylesheet" href="./styles/app.css">
@@ -16,7 +16,6 @@
 <div class="brand-mark"><svg fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><rect height="18" rx="1.5" width="7" x="3" y="3"></rect><rect height="18" rx="1.5" width="7" x="14" y="3"></rect></svg></div>
 <h1>이음</h1>
 </div>
-<p>사진을 순서대로 이어 하나의 이미지로 만듭니다.</p>
 </header>
 <div class="grid">
 <!-- 사진 목록 -->
@@ -26,7 +25,6 @@
 <h2>사진 순서</h2>
 <span class="count" id="photoCount">0장</span>
 </div>
-<div id="dropzone" hidden aria-hidden="true"></div>
 <input accept="image/*" hidden="" id="fileInput" multiple="" type="file"/>
 <ul class="photo-list" id="photoList"></ul>
 <div class="list-footer">
@@ -79,7 +77,7 @@
 <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
 </button>
 </div>
-<div class="ratio-custom-hint" hidden="" id="ratioCustomHint">두 값의 비율로 프레임 모양이 정해져요 (실제 저장 크기는 아래 출력 크기에서 따로 정해요) · 사슬 아이콘을 누르면 가로·세로가 같은 값으로 맞춰져요</div>
+<div class="ratio-custom-hint" hidden="" id="ratioCustomHint"></div>
 </div>
 <div class="field">
 <div class="field-label">간격</div>
@@ -97,7 +95,6 @@
 <button class="active" data-val="frame">프레임</button>
 <button data-val="original">원본 비율</button>
 </div>
-<div class="hint fit-mode-hint" id="fitModeHint">프레임 비율에 맞춰 사진을 정돈합니다.</div>
 </div><div class="field">
 <div class="field-label" id="outputSizeLabel">출력 크기 (긴 변 기준)</div>
 <div class="pillrow" id="outputPills">
@@ -118,7 +115,7 @@
 <div class="adv-body">
 <label class="checkline">
 <input checked="" id="commonAutoCheck" type="checkbox"/>
-<span id="commonAutoLabel">기준 폭 자동 계산 (사진들의 중간값)</span>
+<span id="commonAutoLabel" title="체크하면 사진들 크기의 중간값으로 자동 계산 (비율이 자유일 때 사용)">기준 높이</span>
 </label>
 <input class="num-input" disabled="" id="commonSizeInput" min="50" step="10" type="number"/>
 </div>
@@ -139,17 +136,9 @@
 <div class="field-label"><span>똑바르게</span><span class="mono" id="rotVal">0°</span></div>
 <input id="rotRange" max="45" min="-45" step="1" type="range" value="0"/>
 </div>
-<div class="adjust-field" hidden>
-<div class="field-label"><span>수직</span><span class="mono" id="skewVVal">0</span></div>
-<input id="skewVRange" max="50" min="-50" step="1" type="range" value="0"/>
-</div>
-<div class="adjust-field" hidden>
-<div class="field-label"><span>수평</span><span class="mono" id="skewHVal">0</span></div>
-<input id="skewHRange" max="50" min="-50" step="1" type="range" value="0"/>
-</div>
 <div class="adjust-btns">
 <button class="btn-outline" id="replacePhotoBtn">사진 교체</button>
-<button class="btn-outline" id="resetPhotoBtn">선택 사진 초기화</button>
+<button class="btn-outline" id="resetPhotoBtn" title="선택한 사진의 확대·위치·기울기를 처음으로">초기화</button>
 </div>
 <input accept="image/*" hidden="" id="replaceInput" type="file"/>
 </div>
@@ -232,11 +221,10 @@
 <div class="empty-preview" id="emptyPreview">
 <svg fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" viewbox="0 0 24 24"><rect height="18" rx="2" width="18" x="3" y="3"></rect><circle cx="8.5" cy="9.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg>
 <div class="empty-preview-title">사진을 드래그하거나 눌러서 추가하세요</div>
-<div class="empty-preview-sub">여러 장을 한 번에 선택할 수 있어요</div>
 </div>
 </div>
 </div>
-<div class="edit-hint preview-hint" id="editHint" hidden>사진을 끌어서 위치를 맞추세요 · 두 손가락·휠로 확대 · 터치에서는 모서리를 끌어 회전해요</div>
+<div class="edit-hint preview-hint" id="editHint" hidden></div>
 <div class="preview-bottom-bar">
 <div class="readout">
 <span class="dims mono" id="dimsReadout">—</span>
@@ -250,18 +238,14 @@
 </button>
 </div>
 </div>
-<div class="shortcut-note">단축키: Shift+방향키 순서 이동 · Delete/Backspace 삭제 · Esc 조정 종료 · ⌘/Ctrl+Z 실행 취소</div>
-<div class="privacy-note">
-<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><rect height="9" rx="1.5" width="14" x="5" y="11"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
-          모든 처리는 이 브라우저에서만 이루어지고, 저장 파일에는 EXIF·IPTC 정보가 포함되지 않습니다.
-        </div>
-</div>
-</div>
-</div>
 <footer class="app-footer">
-    Copyright by 송은석. All Rights Reserved.
+    © 2026 Eunseok Song. All rights reserved.
     <div class="contact-line">사용 문의 및 건의: <a href="mailto:silverstone@donga.com">silverstone@donga.com</a></div>
 </footer>
+</div>
+</div>
+</div>
+
 </div>
 <script type="module" src="./src/app.js"></script>
 </body>

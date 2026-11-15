@@ -5,7 +5,7 @@
 
 ## 현재 구현
 - 사진 여러 장 추가, 순서 변경, 삭제, 교체, 실행 취소/재실행
-- 가로/세로 합성, 비율 및 간격, 크롭·회전·기울기·선명도 등 편집
+- 가로/세로 합성, 비율 및 간격, 크롭·확대·수평 맞추기 등 편집 (수직·수평 원근 보정과 선명도는 제거)
 - 미리보기 저해상도 렌더링과 최종 원본 해상도 출력 분리
 - JPG/PNG 저장, PC·모바일 인터페이스, 시스템 다크모드 대응
 - 브라우저 내 처리; 출력물에는 EXIF/IPTC 정보가 포함되지 않음
@@ -15,7 +15,7 @@
 - 리팩터링 작업 이력 보관 브랜치: `refactor/cms-handoff-20261017` (현재 정식판과 분리된 개발 이력)
 - 진입점: `index.html`; 스타일: `styles/app.css`; 앱 제어: `src/app.js`
 - 이미지 계산: `src/composite-geometry.js`, `src/crop-geometry.js`, `src/transform-math.js`
-- 원근 보정: `src/perspective-renderer.js`; 사진 이력 상태: `src/photo-state.js`
+- 사진 이력 상태: `src/photo-state.js`
 - 출력 어댑터: `src/canvas-encoder.js`, `src/browser-download.js`
 - 테스트: Node.js 22 환경에서 `npm ci` 후 `npx playwright install chromium`, 이어서 `npm test`. `package-lock.json`으로 설치 버전을 고정합니다.
 - 테스트 구성: ESLint → Node 단위 테스트 → Chromium Playwright 스모크/다운로드 검증
@@ -64,7 +64,8 @@ type ComposeResult = {
 
 ## 확인된 테스트 범위 (2026-10-17)
 - Chromium PC·모바일 스모크 테스트: 사진 추가 순서, 미리보기, 선택, 삭제·실행 취소, 편집, 다운로드, 오류 감지.
-- 원본 `main`과 비교하는 캔버스 크기·전체 픽셀 해시 검증: 가로 기본 합성, 회전·수직/수평 원근 보정, 세로 합성, 세로 합성에서 출력 1600px·간격 없음 설정. **[최종 CI 통과](https://github.com/photodonga/ieum/actions/runs/39011479037)**.
+- 원본 `main`과 비교하는 합성 크기·배치 검증 (축소 화질을 `imageSmoothingQuality = high`로 바꿔 픽셀 해시는 main과 의도적으로 다름): 가로 기본 합성, 수평 맞추기, 세로 합성, 출력 1600px·간격 없음, 사용자 지정 크기, 비율·맞춤 변경.
+- 이전 기록: **[최종 CI 통과](https://github.com/photodonga/ieum/actions/runs/39011479037)**.
 - JPEG·PNG **실제 다운로드 파일** 시그니처, 확장자, 이미지 치수, 비어 있지 않은 데이터 확인: **[CI 통과](https://github.com/photodonga/ieum/actions/runs/39009746642)**.
 - Node 단위 테스트 10개: 크롭, 회전, 아핀 변환, 사진 이력 복제, Blob URL 수명, Canvas 인코딩 인수 전달. **[CI 통과](https://github.com/photodonga/ieum/actions/runs/39010798553)**.
 - 테스트는 제한된 합성 샘플을 대상으로 하며 출력 파일 전체의 바이너리 동일성이나 메타데이터 보존을 보장하지 않습니다.
@@ -110,3 +111,13 @@ type ComposeResult = {
 - [ ] `src/app.js` 단계적 분리 설계 (이번 작업 범위 제외)
 
 Copyright by 송은석. All Rights Reserved.
+
+## 2026-11 디자인 개편 (민트 · 형제 앱 통일 UI)
+
+- FRAME · KPPA 알리미 · 연합뉴시스원과 같은 평면 디자인, 대표색 민트(라이트 `#2FA88A`, 다크 `#5FDDB9`).
+- 설정 패널 [기본|고급] 전환: 기본(방향·비율·간격), 고급(맞춤 방식·출력 크기·파일 형식). JPG/PNG는 `#formatPills`가 숨은 `#formatSeg`와 동기화.
+- PC는 한 화면에 맞춤(`fitPreviewToViewport` → `--grid-fit-height`), 사진 순서와 미리보기 하단 구분선 정렬.
+- 사진 순서 행은 썸네일·이동·아이콘 3개 한 줄(파일명은 썸네일 title/alt).
+- 긴 변 15,000px 초과 시 자동 축소, 실행 취소 30단계, 쓰지 않는 ImageBitmap 해제, HEIC 등 읽을 수 없는 파일 안내.
+- 설정은 `localStorage`의 `ieum.settings.v1`에 저장, 저장 파일명 `ieum_YYYYMMDD_HHMMSS`.
+- IBM Plex Mono(OFL) 숫자 글꼴을 `fonts/`에 동봉.
