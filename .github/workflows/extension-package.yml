@@ -1,0 +1,44 @@
+name: Package IEUM Chrome extension
+
+on:
+  push:
+    branches:
+      - feature/chrome-extension
+    paths:
+      - "manifest.json"
+      - "extension-background.js"
+      - "index.html"
+      - "src/**"
+      - "styles/**"
+      - ".github/workflows/extension-package.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout extension branch
+        uses: actions/checkout@v4
+      - name: Verify required extension files
+        run: |
+          test -f manifest.json
+          test -f extension-background.js
+          test -f index.html
+          test -f styles/app.css
+          test -f src/app.js
+          python3 -m json.tool manifest.json > /dev/null
+      - name: Upload unpacked extension as ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: ieum-chrome-extension
+          path: |
+            manifest.json
+            extension-background.js
+            index.html
+            styles/
+            src/
+          if-no-files-found: error
+          retention-days: 30
